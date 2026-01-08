@@ -35,7 +35,19 @@ export default {
     }
 
     if (url.pathname === "/report" && request.method === "POST") {
-      return handleReport(request, env);
+      return handleReport(request, env, url.origin);
+    }
+
+    // Serve image by report ID
+    if (url.pathname.startsWith("/image/")) {
+      const reportId = url.pathname.replace("/image/", "");
+      return serveImage(reportId, env);
+    }
+
+    // View full report
+    if (url.pathname.startsWith("/view/")) {
+      const reportId = url.pathname.replace("/view/", "");
+      return serveReportPage(reportId, env);
     }
 
     if (url.pathname === "/health") {
@@ -51,59 +63,67 @@ export default {
   },
 };
 
-function generateFormalLetter(report: PotholeReport, reportId: string): string {
-  const date = new Date().toLocaleDateString('en-US', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+async function serveImage(reportId: string, env: Env): Promise<Response> {
+  const data = await env.REPORTS.get(reportId);
+  if (!data) {
+    return new Response("Not found", { status: 404 });
+  }
+  const report = JSON.parse(data);
+  const base64 = report.image.split(",")[1];
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new Response(bytes, {
+    headers: { "Content-Type": "image/jpeg", "Cache-Control": "public, max-age=31536000" },
   });
-
-  const googleMapsUrl = `https://www.google.com/maps?q=${report.location.lat},${report.location.lng}`;
-
-  return `POTHOLE REPAIR REQUEST
-Report ID: ${reportId}
-Date: ${date}
-
-To: Los Angeles Bureau of Street Services
-Re: Pothole requiring immediate repair
-
-Dear Street Services Team,
-
-I am writing to report a pothole that requires repair at the following location:
-
-ADDRESS: ${report.address}
-
-GPS COORDINATES: ${report.location.lat.toFixed(6)}, ${report.location.lng.toFixed(6)}
-
-GOOGLE MAPS LINK: ${googleMapsUrl}
-
-This pothole poses a safety hazard to vehicles and pedestrians in the area. A photo of the pothole is attached to this report for your reference.
-
-I respectfully request that this issue be addressed at your earliest convenience.
-
-Thank you for your attention to this matter and for your service to our community.
-
-Sincerely,
-A Concerned Bel Air Resident
-
----
-Submitted via Fix My Street App
-Report ID: ${reportId}
-Timestamp: ${report.timestamp}`;
 }
 
-async function handleReport(request: Request, env: Env): Promise<Response> {
+async function serveReportPage(reportId: string, env: Env): Promise<Response> {
+  const data = await env.REPORTS.get(reportId);
+  if (!data) {
+    return new Response("Report not found", { status: 404 });
+  }
+  const report = JSON.parse(data);
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pothole Report ${reportId}</title>
+<style>body{font-family:system-ui;max-width:600px;margin:0 auto;padding:20px;background:#1a1a2e;color:#fff}
+img{width:100%;border-radius:12px;margin:20px 0}h1{color:#f39c12}
+.info{background:#16213e;padding:16px;border-radius:8px;margin:16px 0}
+a{color:#667eea}</style></head>
+<body>
+<h1>Pothole Report</h1>
+<p><strong>ID:</strong> ${reportId}</p>
+<img src="/image/${reportId}" alt="Pothole photo">
+<div class="info">
+<p><strong>Address:</strong> ${report.address}</p>
+<p><strong>GPS:</strong> ${report.location.lat.toFixed(6)}, ${report.location.lng.toFixed(6)}</p>
+<p><a href="${report.googleMapsUrl}" target="_blank">View on Google Maps</a></p>
+<p><strong>Reported:</strong> ${new Date(report.timestamp).toLocaleString()}</p>
+</div>
+</body></html>`;
+  return new Response(html, { headers: { "Content-Type": "text/html" } });
+}
+
+
+async function handleReport(request: Request, env: Env, origin: string): Promise<Response> {
   try {
     const report: PotholeReport = await request.json();
     const reportId = `LA-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 
     const googleMapsUrl = `https://www.google.com/maps?q=${report.location.lat},${report.location.lng}`;
-    const formalLetter = generateFormalLetter(report, reportId);
+    const imageUrl = `${origin}/image/${reportId}`;
+    const viewUrl = `${origin}/view/${reportId}`;
 
-    // Store complete report
+    // Store complete report first so image URL works
     const fullReport = {
       ...report,
       id: reportId,
       googleMapsUrl,
-      formalLetter,
+      imageUrl,
+      viewUrl,
       status: "pending_submission",
       submittedAt: new Date().toISOString(),
     };
@@ -112,9 +132,13 @@ async function handleReport(request: Request, env: Env): Promise<Response> {
       expirationTtl: 60 * 60 * 24 * 180 // 180 days
     });
 
+    // Generate formal letter with image link
+    const formalLetter = generateFormalLetterWithImage(report, reportId, googleMapsUrl, imageUrl, viewUrl);
+
     // Generate mailto link for direct email submission
-    const emailSubject = encodeURIComponent(`Pothole Report ${reportId} - ${report.address.split(',')[0]}`);
-    const emailBody = encodeURIComponent(formalLetter + "\n\n[Photo attached separately - please see image below or in attachment]");
+    const streetName = report.address.split(',')[0] || 'Unknown Location';
+    const emailSubject = encodeURIComponent(`Pothole Report ${reportId} - ${streetName}`);
+    const emailBody = encodeURIComponent(formalLetter);
     const mailtoUrl = `mailto:${STREET_SERVICES_EMAIL}?cc=${LA_311_EMAIL}&subject=${emailSubject}&body=${emailBody}`;
 
     // MyLA311 direct link
@@ -124,6 +148,8 @@ async function handleReport(request: Request, env: Env): Promise<Response> {
       success: true,
       reportId,
       googleMapsUrl,
+      imageUrl,
+      viewUrl,
       formalLetter,
       mailtoUrl,
       myLA311Url,
@@ -142,6 +168,44 @@ async function handleReport(request: Request, env: Env): Promise<Response> {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
+}
+
+function generateFormalLetterWithImage(report: PotholeReport, reportId: string, googleMapsUrl: string, imageUrl: string, viewUrl: string): string {
+  const date = new Date().toLocaleDateString('en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
+
+  return `POTHOLE REPAIR REQUEST
+Report ID: ${reportId}
+Date: ${date}
+
+To: Los Angeles Bureau of Street Services
+Re: Pothole requiring immediate repair
+
+Dear Street Services Team,
+
+I am writing to report a pothole that requires repair at the following location:
+
+STREET ADDRESS: ${report.address}
+
+GPS COORDINATES: ${report.location.lat.toFixed(6)}, ${report.location.lng.toFixed(6)}
+
+GOOGLE MAPS: ${googleMapsUrl}
+
+PHOTO OF POTHOLE: ${imageUrl}
+
+FULL REPORT WITH PHOTO: ${viewUrl}
+
+This pothole poses a safety hazard to vehicles and pedestrians. Please prioritize this repair.
+
+Thank you for your service to our community.
+
+Sincerely,
+A Concerned Bel Air Resident
+
+---
+Submitted via Fix My Street App
+Report ID: ${reportId}`;
 }
 
 const HTML = `<!DOCTYPE html>
