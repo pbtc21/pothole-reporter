@@ -22,9 +22,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
-// Test mode - send to personal email
-const LA_311_EMAIL = "pstan26@gmail.com";
-const STREET_SERVICES_EMAIL = "pstan26@gmail.com";
+// LA Bureau of Street Services
+const LA_311_EMAIL = "311@lacity.org";
+const STREET_SERVICES_EMAIL = "BSS.CustomerService@lacity.org";
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -458,6 +458,99 @@ const HTML = `<!DOCTYPE html>
     .loading .icon { font-size: 60px; animation: spin 1s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .loading-text { font-size: 18px; font-weight: 600; }
+
+    /* Help Screen */
+    .help-screen {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 15, 35, 0.95);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      padding: 20px;
+    }
+    .help-screen.active { display: flex; }
+    .help-card {
+      background: linear-gradient(135deg, #1e1e3f 0%, #2d2d5a 100%);
+      border-radius: 24px;
+      padding: 24px;
+      max-width: 340px;
+      width: 100%;
+      border: 2px solid #3d3d7a;
+    }
+    .help-header { text-align: center; margin-bottom: 20px; }
+    .help-icon { font-size: 50px; display: block; margin-bottom: 12px; }
+    .help-header h2 { font-size: 24px; font-weight: 800; margin-bottom: 8px; }
+    .help-header p { color: #888; font-size: 14px; }
+    .platform-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .platform-tabs .tab {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      background: #16213e;
+      color: #888;
+      transition: all 0.2s;
+    }
+    .platform-tabs .tab.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    .instructions { display: none; }
+    .instructions.active { display: block; }
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: #16213e;
+      border-radius: 10px;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    .step .num {
+      width: 28px;
+      height: 28px;
+      background: linear-gradient(135deg, #ff6b35 0%, #f7c531 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+    .step b { color: #00cec9; }
+    .retry-btn {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
+      border: none;
+      border-radius: 14px;
+      color: white;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 16px;
+    }
+    .close-help {
+      width: 100%;
+      padding: 14px;
+      background: transparent;
+      border: none;
+      color: #666;
+      font-size: 14px;
+      cursor: pointer;
+      margin-top: 8px;
+    }
   </style>
 </head>
 <body>
@@ -527,6 +620,40 @@ const HTML = `<!DOCTYPE html>
   <div id="loading" class="loading">
     <div class="icon">⚡</div>
     <div class="loading-text">Preparing your report...</div>
+  </div>
+
+  <div id="help-screen" class="help-screen">
+    <div class="help-card">
+      <div class="help-header">
+        <span class="help-icon">📍</span>
+        <h2>Enable Location</h2>
+        <p>We need your location to pinpoint the pothole</p>
+      </div>
+
+      <div class="platform-tabs">
+        <button class="tab active" onclick="showTab('iphone')">iPhone</button>
+        <button class="tab" onclick="showTab('android')">Android</button>
+      </div>
+
+      <div id="iphone-instructions" class="instructions active">
+        <div class="step"><span class="num">1</span> Open your <b>Settings</b> app</div>
+        <div class="step"><span class="num">2</span> Scroll down and tap <b>Chrome</b></div>
+        <div class="step"><span class="num">3</span> Tap <b>Location</b></div>
+        <div class="step"><span class="num">4</span> Select <b>"While Using the App"</b></div>
+        <div class="step"><span class="num">5</span> Come back here and tap <b>Try Again</b></div>
+      </div>
+
+      <div id="android-instructions" class="instructions">
+        <div class="step"><span class="num">1</span> Open your <b>Settings</b> app</div>
+        <div class="step"><span class="num">2</span> Tap <b>Apps</b> → <b>Chrome</b></div>
+        <div class="step"><span class="num">3</span> Tap <b>Permissions</b></div>
+        <div class="step"><span class="num">4</span> Tap <b>Location</b> → <b>Allow</b></div>
+        <div class="step"><span class="num">5</span> Come back here and tap <b>Try Again</b></div>
+      </div>
+
+      <button class="retry-btn" onclick="retryLocation()">🔄 Try Again</button>
+      <button class="close-help" onclick="closeHelp()">Maybe Later</button>
+    </div>
   </div>
 
   <script>
@@ -616,10 +743,11 @@ const HTML = `<!DOCTYPE html>
 
       function handleError(err) {
         if (err.code === 1) {
-          // Permission denied
+          // Permission denied - show help screen
           gpsBar.className = 'gps-bar denied';
           gpsBar.style.background = '#e74c3c';
-          gpsText.innerHTML = '⚠️ Location blocked - <a href="#" onclick="showHelp()" style="color:white;text-decoration:underline">tap to fix</a>';
+          gpsBar.onclick = showHelp;
+          gpsText.innerHTML = '⚠️ Location blocked - <b>tap here to fix</b>';
         } else if (err.code === 2) {
           gpsText.textContent = '📍 GPS unavailable - try outdoors';
         } else {
@@ -655,8 +783,31 @@ const HTML = `<!DOCTYPE html>
       );
     }
 
+    const helpScreen = document.getElementById('help-screen');
+
     function showHelp() {
-      alert('To enable location:\\n\\n1. Tap the lock icon next to the URL\\n2. Tap "Site settings"\\n3. Set Location to "Allow"\\n4. Refresh this page');
+      // Auto-detect platform
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if (!isIOS) showTab('android');
+      helpScreen.classList.add('active');
+    }
+
+    function closeHelp() {
+      helpScreen.classList.remove('active');
+    }
+
+    function showTab(platform) {
+      document.querySelectorAll('.platform-tabs .tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.instructions').forEach(i => i.classList.remove('active'));
+      document.querySelector('.tab:' + (platform === 'iphone' ? 'first-child' : 'last-child')).classList.add('active');
+      document.getElementById(platform + '-instructions').classList.add('active');
+    }
+
+    function retryLocation() {
+      closeHelp();
+      gpsBar.className = 'gps-bar searching';
+      gpsText.textContent = 'Trying again...';
+      initGPS();
     }
 
     function onGPSLock() {
