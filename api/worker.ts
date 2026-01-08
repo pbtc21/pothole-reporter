@@ -610,38 +610,53 @@ const HTML = `<!DOCTYPE html>
 
     function initGPS() {
       if (!('geolocation' in navigator)) {
-        gpsText.textContent = 'GPS not available';
+        gpsText.textContent = 'GPS not available on this device';
         return;
       }
 
-      // First try to get a quick position
+      function handleError(err) {
+        if (err.code === 1) {
+          // Permission denied
+          gpsBar.className = 'gps-bar denied';
+          gpsBar.style.background = '#e74c3c';
+          gpsText.innerHTML = '⚠️ Location blocked - <a href="#" onclick="showHelp()" style="color:white;text-decoration:underline">tap to fix</a>';
+        } else if (err.code === 2) {
+          gpsText.textContent = '📍 GPS unavailable - try outdoors';
+        } else {
+          gpsText.textContent = '⏳ GPS timeout - trying again...';
+          setTimeout(initGPS, 2000);
+        }
+      }
+
+      // Request permission - this triggers the prompt
       navigator.geolocation.getCurrentPosition(
         p => {
           loc = { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy };
           onGPSLock();
+          startWatching();
         },
-        () => {},
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        handleError,
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
       );
+    }
 
-      // Then watch for updates
+    function startWatching() {
       navigator.geolocation.watchPosition(
         p => {
           loc = { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy };
           if (!gpsReady) onGPSLock();
-          // Update accuracy display
           if (gpsReady) {
             const acc = Math.round(loc.accuracy);
             gpsText.textContent = acc + 'm accuracy • ' + loc.lat.toFixed(5) + ', ' + loc.lng.toFixed(5);
           }
         },
-        err => {
-          if (!gpsReady) {
-            gpsText.textContent = 'GPS error - please enable location';
-          }
-        },
+        () => {},
         { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
       );
+    }
+
+    function showHelp() {
+      alert('To enable location:\\n\\n1. Tap the lock icon next to the URL\\n2. Tap "Site settings"\\n3. Set Location to "Allow"\\n4. Refresh this page');
     }
 
     function onGPSLock() {
