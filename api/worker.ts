@@ -215,13 +215,13 @@ const HTML = `<!DOCTYPE html>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#1a1a2e">
-  <title>Fix My Street - Bel Air</title>
+  <meta name="theme-color" content="#0f0f23">
+  <title>POTHOLE HUNTER - Bel Air</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #1a1a2e;
+      background: linear-gradient(180deg, #0f0f23 0%, #1a1a3e 100%);
       color: white;
       min-height: 100vh;
       min-height: 100dvh;
@@ -230,12 +230,26 @@ const HTML = `<!DOCTYPE html>
       overflow-x: hidden;
     }
     .header {
-      padding: 16px 20px;
+      padding: 20px;
       text-align: center;
-      background: linear-gradient(135deg, #f39c12 0%, #e74c3c 100%);
+      background: linear-gradient(135deg, #ff6b35 0%, #f7c531 100%);
+      position: relative;
+      overflow: hidden;
     }
-    .header h1 { font-size: 24px; font-weight: 800; }
-    .header p { font-size: 13px; opacity: 0.9; margin-top: 2px; }
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
+      animation: shimmer 3s infinite;
+    }
+    @keyframes shimmer { 0%,100%{transform:rotate(0deg)} 50%{transform:rotate(180deg)} }
+    .header h1 { font-size: 28px; font-weight: 900; letter-spacing: 2px; text-shadow: 2px 2px 0 rgba(0,0,0,0.2); position: relative; }
+    .header p { font-size: 14px; opacity: 0.9; margin-top: 4px; position: relative; }
+
     .main {
       flex: 1;
       display: flex;
@@ -243,20 +257,48 @@ const HTML = `<!DOCTYPE html>
       align-items: center;
       justify-content: center;
       padding: 20px;
-      gap: 20px;
+      gap: 16px;
     }
+
+    /* GPS Status Bar */
+    .gps-bar {
+      width: 100%;
+      max-width: 320px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+    .gps-bar.searching {
+      background: linear-gradient(90deg, #ff6b35, #f7c531, #ff6b35);
+      background-size: 200% 100%;
+      animation: gpsSearch 1.5s infinite;
+    }
+    @keyframes gpsSearch { 0%{background-position:0% 50%} 100%{background-position:200% 50%} }
+    .gps-bar.locked {
+      background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
+    }
+    .gps-bar svg { width: 20px; height: 20px; fill: currentColor; }
+    .gps-bar.searching svg { animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
     .preview-area {
       width: 100%;
       max-width: 320px;
       aspect-ratio: 4/3;
       background: #16213e;
-      border-radius: 20px;
+      border-radius: 24px;
       overflow: hidden;
       position: relative;
       display: flex;
       align-items: center;
       justify-content: center;
-      border: 3px solid #333;
+      border: 4px solid #2d2d5a;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.4), inset 0 0 60px rgba(255,107,53,0.05);
     }
     .preview-area video, .preview-area img {
       width: 100%;
@@ -264,90 +306,116 @@ const HTML = `<!DOCTYPE html>
       object-fit: cover;
     }
     .preview-area canvas { display: none; }
+    .preview-area .crosshair {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      border: 3px solid rgba(255,107,53,0.7);
+      border-radius: 50%;
+      pointer-events: none;
+      animation: crosshairPulse 2s infinite;
+    }
+    @keyframes crosshairPulse { 0%,100%{transform:scale(1);opacity:0.7} 50%{transform:scale(1.1);opacity:1} }
+    .crosshair::before, .crosshair::after {
+      content: '';
+      position: absolute;
+      background: rgba(255,107,53,0.7);
+    }
+    .crosshair::before { width: 2px; height: 20px; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+    .crosshair::after { width: 20px; height: 2px; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+
     .placeholder {
       text-align: center;
-      color: #f39c12;
+      color: #ff6b35;
       padding: 20px;
     }
-    .placeholder svg { width: 60px; height: 60px; margin-bottom: 12px; }
+    .placeholder .icon { font-size: 60px; margin-bottom: 12px; }
     .placeholder p { font-size: 16px; line-height: 1.4; }
+
     .big-btn {
-      width: 100px;
-      height: 100px;
+      width: 90px;
+      height: 90px;
       border-radius: 50%;
-      border: 6px solid white;
-      background: linear-gradient(135deg, #f39c12 0%, #e74c3c 100%);
+      border: none;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: transform 0.15s;
-      box-shadow: 0 6px 30px rgba(243, 156, 18, 0.5);
+      transition: all 0.2s;
+      position: relative;
     }
-    .big-btn:active { transform: scale(0.92); }
-    .big-btn svg { width: 40px; height: 40px; fill: white; }
-    .big-btn.sending { animation: pulse 0.8s infinite; }
-    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
-    .status { text-align: center; min-height: 60px; }
-    .status-main { font-size: 20px; font-weight: 700; }
-    .status-sub { font-size: 14px; color: #888; margin-top: 4px; }
-    .location { font-size: 12px; color: #f39c12; margin-top: 8px; word-break: break-all; padding: 0 10px; }
+    .big-btn.disabled {
+      background: #444;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+    .big-btn.ready {
+      background: linear-gradient(135deg, #ff6b35 0%, #f7c531 100%);
+      box-shadow: 0 6px 30px rgba(255,107,53,0.6);
+      animation: readyPulse 2s infinite;
+    }
+    @keyframes readyPulse { 0%,100%{box-shadow:0 6px 30px rgba(255,107,53,0.6)} 50%{box-shadow:0 6px 50px rgba(255,107,53,0.9)} }
+    .big-btn.captured {
+      background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
+      box-shadow: 0 6px 30px rgba(0,184,148,0.6);
+    }
+    .big-btn:active:not(.disabled) { transform: scale(0.92); }
+    .big-btn .icon { font-size: 36px; }
+
+    .status { text-align: center; min-height: 50px; }
+    .status-main { font-size: 22px; font-weight: 800; }
+    .status-main.warning { color: #f7c531; }
+    .status-main.success { color: #00b894; }
+    .status-sub { font-size: 13px; color: #888; margin-top: 4px; }
+
     .screen { display: none; }
     .screen.active { display: flex; flex-direction: column; flex: 1; }
 
-    /* Success screen with send options */
+    /* Success screen */
     .success-screen {
       align-items: center;
       text-align: center;
       padding: 20px;
       overflow-y: auto;
     }
-    .success-screen h2 { font-size: 28px; margin: 16px 0 8px; color: #27ae60; }
-    .success-screen .subtitle { color: #888; font-size: 14px; margin-bottom: 20px; }
+    .success-icon { font-size: 80px; animation: celebrate 0.5s ease-out; }
+    @keyframes celebrate { 0%{transform:scale(0)} 50%{transform:scale(1.2)} 100%{transform:scale(1)} }
+    .success-screen h2 { font-size: 28px; margin: 12px 0 6px; color: #00b894; font-weight: 900; }
+    .success-screen .subtitle { color: #888; font-size: 14px; margin-bottom: 16px; }
 
-    .report-preview {
-      background: #16213e;
-      border-radius: 12px;
+    .report-card {
+      background: linear-gradient(135deg, #1e1e3f 0%, #2d2d5a 100%);
+      border-radius: 16px;
       padding: 16px;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
       width: 100%;
-      max-width: 350px;
+      max-width: 340px;
       text-align: left;
+      border: 2px solid #3d3d7a;
     }
-    .report-preview img {
+    .report-card img {
       width: 100%;
-      border-radius: 8px;
+      border-radius: 12px;
       margin-bottom: 12px;
     }
-    .report-preview .addr {
-      font-size: 14px;
-      color: #f39c12;
-      margin-bottom: 8px;
-      word-break: break-word;
-    }
-    .report-preview .coords {
-      font-size: 12px;
-      color: #666;
-    }
-    .report-preview a {
-      color: #667eea;
-      text-decoration: none;
-    }
+    .report-card .label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+    .report-card .value { font-size: 15px; color: #fff; margin-bottom: 12px; word-break: break-word; }
+    .report-card .value a { color: #00cec9; text-decoration: none; }
 
     .send-options {
       width: 100%;
-      max-width: 350px;
+      max-width: 340px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      margin-bottom: 20px;
+      gap: 10px;
+      margin-bottom: 16px;
     }
     .send-btn {
-      padding: 16px 24px;
+      padding: 16px 20px;
       border: none;
-      border-radius: 12px;
+      border-radius: 14px;
       font-size: 16px;
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -355,34 +423,30 @@ const HTML = `<!DOCTYPE html>
       gap: 10px;
       text-decoration: none;
       color: white;
+      transition: transform 0.15s;
     }
-    .send-btn.email {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    }
-    .send-btn.la311 {
-      background: linear-gradient(135deg, #f39c12 0%, #e74c3c 100%);
-    }
-    .send-btn.share {
-      background: #27ae60;
-    }
-    .send-btn svg { width: 24px; height: 24px; fill: currentColor; }
+    .send-btn:active { transform: scale(0.97); }
+    .send-btn.email { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .send-btn.la311 { background: linear-gradient(135deg, #ff6b35 0%, #f7c531 100%); }
+    .send-btn.share { background: linear-gradient(135deg, #00b894 0%, #00cec9 100%); }
+    .send-btn .icon { font-size: 22px; }
 
     .again-btn {
       padding: 14px 40px;
-      background: #333;
-      border: none;
+      background: #2d2d5a;
+      border: 2px solid #3d3d7a;
       border-radius: 30px;
       color: white;
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 600;
       cursor: pointer;
-      margin-top: 10px;
+      margin-top: 8px;
     }
 
     .loading {
       position: fixed;
       inset: 0;
-      background: rgba(26, 26, 46, 0.97);
+      background: rgba(15, 15, 35, 0.97);
       display: none;
       align-items: center;
       justify-content: center;
@@ -391,14 +455,7 @@ const HTML = `<!DOCTYPE html>
       z-index: 100;
     }
     .loading.active { display: flex; }
-    .spinner {
-      width: 60px;
-      height: 60px;
-      border: 5px solid #333;
-      border-top-color: #f39c12;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
+    .loading .icon { font-size: 60px; animation: spin 1s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .loading-text { font-size: 18px; font-weight: 600; }
   </style>
@@ -406,68 +463,70 @@ const HTML = `<!DOCTYPE html>
 <body>
   <div id="main-screen" class="screen active">
     <div class="header">
-      <h1>FIX MY STREET</h1>
-      <p>Report potholes in Bel Air, LA</p>
+      <h1>POTHOLE HUNTER</h1>
+      <p>Making Bel Air roads smooth again</p>
     </div>
     <div class="main">
+      <div id="gps-bar" class="gps-bar searching">
+        <svg viewBox="0 0 24 24"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>
+        <span id="gps-text">Locking onto your location...</span>
+      </div>
+
       <div class="preview-area">
         <video id="video" autoplay playsinline></video>
         <img id="preview" style="display:none;">
         <canvas id="canvas"></canvas>
+        <div id="crosshair" class="crosshair" style="display:none;"></div>
         <div id="placeholder" class="placeholder">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 15.2C13.767 15.2 15.2 13.767 15.2 12C15.2 10.233 13.767 8.8 12 8.8C10.233 8.8 8.8 10.233 8.8 12C8.8 13.767 10.233 15.2 12 15.2Z"/>
-            <path d="M9 2L7.17 4H4C2.9 4 2 4.9 2 6V18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.9 21.1 4 20 4H16.83L15 2H9ZM12 17C9.24 17 7 14.76 7 12C7 9.24 9.24 7 12 7C14.76 7 17 9.24 17 12C17 14.76 14.76 17 12 17Z"/>
-          </svg>
-          <p>Tap button to<br>take photo</p>
+          <div class="icon">📷</div>
+          <p>Camera loading...</p>
         </div>
       </div>
-      <button id="big-btn" class="big-btn" aria-label="Take photo">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></svg>
+
+      <button id="big-btn" class="big-btn disabled" aria-label="Take photo" disabled>
+        <span class="icon">⏳</span>
       </button>
+
       <div class="status">
-        <div id="status-main" class="status-main">Point at pothole</div>
-        <div id="status-sub" class="status-sub">Tap the orange button</div>
-        <div id="location" class="location"></div>
+        <div id="status-main" class="status-main warning">Waiting for GPS...</div>
+        <div id="status-sub" class="status-sub">Need location before you can snap</div>
       </div>
     </div>
   </div>
 
   <div id="success-screen" class="screen success-screen">
-    <svg viewBox="0 0 24 24" style="width:80px;height:80px;fill:#27ae60;">
-      <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z"/>
-    </svg>
-    <h2>Report Ready!</h2>
-    <p class="subtitle">Choose how to send to LA 311</p>
+    <div class="success-icon">🎯</div>
+    <h2>POTHOLE LOCKED!</h2>
+    <p class="subtitle">Ready to send to LA Street Services</p>
 
-    <div class="report-preview">
+    <div class="report-card">
       <img id="report-img" src="" alt="Pothole photo">
-      <div class="addr" id="report-addr"></div>
-      <div class="coords" id="report-coords"></div>
-      <a id="report-map" href="#" target="_blank">View on Google Maps</a>
+      <div class="label">Street Address</div>
+      <div class="value" id="report-addr"></div>
+      <div class="label">GPS Coordinates</div>
+      <div class="value" id="report-coords"></div>
+      <div class="label">Map</div>
+      <div class="value"><a id="report-map" href="#" target="_blank">Open in Google Maps →</a></div>
     </div>
 
     <div class="send-options">
       <a id="email-btn" href="#" class="send-btn email">
-        <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
-        Email LA Street Services
+        <span class="icon">📧</span> Email Street Services
       </a>
       <a id="la311-btn" href="https://myla311.lacity.org" target="_blank" class="send-btn la311">
-        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-        Open MyLA311 Portal
+        <span class="icon">🏛️</span> Open LA311 Portal
       </a>
       <button id="share-btn" class="send-btn share">
-        <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
-        Share Report
+        <span class="icon">📤</span> Share Report
       </button>
     </div>
 
-    <button id="again-btn" class="again-btn">Report Another Pothole</button>
+    <button id="again-btn" class="again-btn">🎯 Hunt Another Pothole</button>
   </div>
 
   <div id="loading" class="loading">
-    <div class="spinner"></div>
-    <div class="loading-text">Preparing report...</div>
+    <div class="icon">⚡</div>
+    <div class="loading-text">Preparing your report...</div>
   </div>
 
   <script>
@@ -475,10 +534,12 @@ const HTML = `<!DOCTYPE html>
     const canvas = document.getElementById('canvas');
     const preview = document.getElementById('preview');
     const placeholder = document.getElementById('placeholder');
+    const crosshair = document.getElementById('crosshair');
     const bigBtn = document.getElementById('big-btn');
     const statusMain = document.getElementById('status-main');
     const statusSub = document.getElementById('status-sub');
-    const locationEl = document.getElementById('location');
+    const gpsBar = document.getElementById('gps-bar');
+    const gpsText = document.getElementById('gps-text');
     const loading = document.getElementById('loading');
     const mainScreen = document.getElementById('main-screen');
     const successScreen = document.getElementById('success-screen');
@@ -492,9 +553,44 @@ const HTML = `<!DOCTYPE html>
 
     let stream = null;
     let loc = null;
+    let gpsReady = false;
+    let cameraReady = false;
     let photoData = null;
     let hasPhoto = false;
     let currentReport = null;
+
+    function updateButtonState() {
+      if (hasPhoto) {
+        bigBtn.className = 'big-btn captured';
+        bigBtn.disabled = false;
+        bigBtn.innerHTML = '<span class="icon">🚀</span>';
+        statusMain.textContent = 'Photo captured!';
+        statusMain.className = 'status-main success';
+        statusSub.textContent = 'Tap rocket to send report';
+      } else if (gpsReady && cameraReady) {
+        bigBtn.className = 'big-btn ready';
+        bigBtn.disabled = false;
+        bigBtn.innerHTML = '<span class="icon">📸</span>';
+        statusMain.textContent = 'Ready to hunt!';
+        statusMain.className = 'status-main success';
+        statusSub.textContent = 'Point at pothole and tap';
+        crosshair.style.display = 'block';
+      } else if (!gpsReady) {
+        bigBtn.className = 'big-btn disabled';
+        bigBtn.disabled = true;
+        bigBtn.innerHTML = '<span class="icon">📡</span>';
+        statusMain.textContent = 'Locking GPS...';
+        statusMain.className = 'status-main warning';
+        statusSub.textContent = 'Stay still for best accuracy';
+      } else {
+        bigBtn.className = 'big-btn disabled';
+        bigBtn.disabled = true;
+        bigBtn.innerHTML = '<span class="icon">📷</span>';
+        statusMain.textContent = 'Starting camera...';
+        statusMain.className = 'status-main warning';
+        statusSub.textContent = 'Please allow camera access';
+      }
+    }
 
     async function startCam() {
       try {
@@ -505,27 +601,65 @@ const HTML = `<!DOCTYPE html>
         video.srcObject = stream;
         video.style.display = 'block';
         placeholder.style.display = 'none';
+        cameraReady = true;
+        updateButtonState();
       } catch (e) {
-        statusMain.textContent = 'Camera needed';
-        statusSub.textContent = 'Please allow access';
+        placeholder.innerHTML = '<div class="icon">🚫</div><p>Camera access needed<br>Please allow and refresh</p>';
       }
     }
 
-    function getLoc() {
-      if ('geolocation' in navigator) {
-        navigator.geolocation.watchPosition(
-          p => {
-            loc = { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy };
-            locationEl.textContent = '📍 GPS: ' + loc.lat.toFixed(6) + ', ' + loc.lng.toFixed(6);
-          },
-          () => locationEl.textContent = '📍 Getting location...',
-          { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-        );
+    function initGPS() {
+      if (!('geolocation' in navigator)) {
+        gpsText.textContent = 'GPS not available';
+        return;
       }
+
+      // First try to get a quick position
+      navigator.geolocation.getCurrentPosition(
+        p => {
+          loc = { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy };
+          onGPSLock();
+        },
+        () => {},
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+
+      // Then watch for updates
+      navigator.geolocation.watchPosition(
+        p => {
+          loc = { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy };
+          if (!gpsReady) onGPSLock();
+          // Update accuracy display
+          if (gpsReady) {
+            const acc = Math.round(loc.accuracy);
+            gpsText.textContent = acc + 'm accuracy • ' + loc.lat.toFixed(5) + ', ' + loc.lng.toFixed(5);
+          }
+        },
+        err => {
+          if (!gpsReady) {
+            gpsText.textContent = 'GPS error - please enable location';
+          }
+        },
+        { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
+      );
+    }
+
+    function onGPSLock() {
+      gpsReady = true;
+      gpsBar.className = 'gps-bar locked';
+      const acc = Math.round(loc.accuracy);
+      gpsText.textContent = '✓ Locked! ' + acc + 'm accuracy';
+      updateButtonState();
     }
 
     function takePhoto() {
+      if (!gpsReady) {
+        statusMain.textContent = 'Wait for GPS!';
+        statusSub.textContent = 'Need your location first';
+        return;
+      }
       if (!stream) { startCam(); return; }
+
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       canvas.getContext('2d').drawImage(video, 0, 0);
@@ -533,24 +667,23 @@ const HTML = `<!DOCTYPE html>
       preview.src = photoData;
       preview.style.display = 'block';
       video.style.display = 'none';
+      crosshair.style.display = 'none';
       hasPhoto = true;
-      statusMain.textContent = 'Photo captured!';
-      statusSub.textContent = 'Tap again to prepare report';
-      bigBtn.querySelector('svg').innerHTML = '<path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>';
+      updateButtonState();
     }
 
     async function send() {
-      if (!photoData) return;
+      if (!photoData || !loc) return;
       loading.classList.add('active');
 
       const addr = await reverseGeo(loc);
       const report = {
         type: 'pothole',
-        location: loc || { lat: 34.0825, lng: -118.4476 },
+        location: loc,
         timestamp: new Date().toISOString(),
         image: photoData,
         address: addr,
-        source: 'Fix My Street'
+        source: 'Pothole Hunter'
       };
 
       try {
@@ -561,10 +694,9 @@ const HTML = `<!DOCTYPE html>
         });
         currentReport = await r.json();
 
-        // Update success screen
         reportImg.src = photoData;
-        reportAddr.textContent = '📍 ' + currentReport.address;
-        reportCoords.textContent = 'GPS: ' + report.location.lat.toFixed(6) + ', ' + report.location.lng.toFixed(6);
+        reportAddr.textContent = currentReport.address;
+        reportCoords.textContent = loc.lat.toFixed(6) + ', ' + loc.lng.toFixed(6);
         reportMap.href = currentReport.googleMapsUrl;
         emailBtn.href = currentReport.mailtoUrl;
 
@@ -582,47 +714,28 @@ const HTML = `<!DOCTYPE html>
       try {
         const r = await fetch('https://nominatim.openstreetmap.org/reverse?lat=' + l.lat + '&lon=' + l.lng + '&format=json&addressdetails=1');
         const d = await r.json();
-        // Build a clean address
         const a = d.address || {};
         const parts = [a.house_number, a.road, a.neighbourhood || a.suburb, a.city || 'Los Angeles', 'CA', a.postcode].filter(Boolean);
         return parts.join(', ') || d.display_name || 'Bel Air, Los Angeles, CA';
       } catch { return 'Bel Air, Los Angeles, CA'; }
     }
 
-    // Share functionality
     shareBtn.onclick = async () => {
       if (!currentReport) return;
+      const shareText = 'POTHOLE REPORT ' + currentReport.reportId + '\\n\\nLocation: ' + currentReport.address + '\\nMap: ' + currentReport.googleMapsUrl + '\\nPhoto: ' + currentReport.imageUrl;
 
-      const shareText = 'POTHOLE REPORT - ' + currentReport.reportId + '\\n\\n' +
-        'Location: ' + currentReport.address + '\\n' +
-        'Google Maps: ' + currentReport.googleMapsUrl + '\\n\\n' +
-        'Please fix this pothole. Photo attached.';
-
-      if (navigator.share && navigator.canShare) {
+      if (navigator.share) {
         try {
-          // Convert base64 to blob for sharing
           const response = await fetch(photoData);
           const blob = await response.blob();
-          const file = new File([blob], 'pothole-' + currentReport.reportId + '.jpg', { type: 'image/jpeg' });
-
-          await navigator.share({
-            title: 'Pothole Report ' + currentReport.reportId,
-            text: shareText,
-            files: [file]
-          });
-        } catch (e) {
-          // Fallback to text-only share
-          try {
-            await navigator.share({
-              title: 'Pothole Report',
-              text: shareText
-            });
-          } catch {}
+          const file = new File([blob], 'pothole.jpg', { type: 'image/jpeg' });
+          await navigator.share({ title: 'Pothole Report', text: shareText, files: [file] });
+        } catch {
+          try { await navigator.share({ title: 'Pothole Report', text: shareText }); } catch {}
         }
       } else {
-        // Fallback: copy to clipboard
         await navigator.clipboard.writeText(shareText);
-        alert('Report copied to clipboard!');
+        alert('Copied to clipboard!');
       }
     };
 
@@ -632,18 +745,22 @@ const HTML = `<!DOCTYPE html>
       currentReport = null;
       preview.style.display = 'none';
       video.style.display = 'block';
-      bigBtn.querySelector('svg').innerHTML = '<circle cx="12" cy="12" r="8"/>';
-      statusMain.textContent = 'Point at pothole';
-      statusSub.textContent = 'Tap the orange button';
+      crosshair.style.display = gpsReady ? 'block' : 'none';
       successScreen.classList.remove('active');
       mainScreen.classList.add('active');
+      updateButtonState();
     }
 
-    bigBtn.onclick = () => hasPhoto ? send() : takePhoto();
+    bigBtn.onclick = () => {
+      if (bigBtn.disabled) return;
+      hasPhoto ? send() : takePhoto();
+    };
     againBtn.onclick = reset;
 
+    // Initialize
     startCam();
-    getLoc();
+    initGPS();
+    updateButtonState();
   </script>
 </body>
 </html>`;
