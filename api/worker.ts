@@ -22,9 +22,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
-// LA City Council District 5 (Bel Air area) contact
-const LA_311_EMAIL = "311@lacity.org";
-const STREET_SERVICES_EMAIL = "BSS.CustomerService@lacity.org";
+// Test mode - send to personal email
+const LA_311_EMAIL = "pstan26@gmail.com";
+const STREET_SERVICES_EMAIL = "pstan26@gmail.com";
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
