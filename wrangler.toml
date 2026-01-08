@@ -1,0 +1,9 @@
+name = "pothole-api"
+main = "api/worker.ts"
+compatibility_date = "2024-01-01"
+
+workers_dev = true
+
+[[kv_namespaces]]
+binding = "REPORTS"
+id = "dfed857c87bf4298b7a3375150c163e8"
