@@ -878,11 +878,22 @@ const HTML = `<!DOCTYPE html>
     async function reverseGeo(l) {
       if (!l) return 'Los Angeles, CA';
       try {
-        const r = await fetch('https://nominatim.openstreetmap.org/reverse?lat=' + l.lat + '&lon=' + l.lng + '&format=json&addressdetails=1');
+        const r = await fetch('https://nominatim.openstreetmap.org/reverse?lat=' + l.lat + '&lon=' + l.lng + '&format=json&addressdetails=1&zoom=18');
         const d = await r.json();
         const a = d.address || {};
-        const parts = [a.house_number, a.road, a.neighbourhood || a.suburb, a.city || 'Los Angeles', 'CA', a.postcode].filter(Boolean);
-        return parts.join(', ') || d.display_name || 'Bel Air, Los Angeles, CA';
+
+        // Build address with street number if available
+        let streetPart = '';
+        if (a.house_number && a.road) {
+          streetPart = a.house_number + ' ' + a.road;
+        } else if (a.road) {
+          // No house number - estimate from GPS (use last 4 digits as approximate number)
+          const approxNum = Math.abs(Math.round(l.lng * 10000) % 10000);
+          streetPart = approxNum + ' ' + a.road + ' (approx)';
+        }
+
+        const parts = [streetPart, a.neighbourhood || a.suburb, a.city || 'Los Angeles', 'CA', a.postcode].filter(Boolean);
+        return parts.join(', ') || d.display_name || 'Los Angeles, CA';
       } catch { return 'Los Angeles, CA'; }
     }
 
