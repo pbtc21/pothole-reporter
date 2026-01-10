@@ -314,9 +314,41 @@
         statusSub.textContent = 'Tap the big button';
       } catch (err) {
         console.error('Camera error:', err);
-        statusText.textContent = 'Camera needed';
-        statusSub.textContent = 'Please allow camera access';
+        showCameraHelp();
       }
+    }
+
+    // Show help for denied camera permission
+    function showCameraHelp() {
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+      placeholder.innerHTML = isIOS ? `
+        <div style="color: #f39c12; padding: 20px; text-align: left;">
+          <div style="font-size: 40px; text-align: center; margin-bottom: 16px;">📷</div>
+          <strong style="font-size: 16px;">Camera access needed</strong>
+          <p style="font-size: 13px; color: #888; margin-top: 8px; line-height: 1.5;">
+            <b>On iPhone:</b><br>
+            Settings → Safari → Camera<br>
+            Set to "Ask" or "Allow"
+          </p>
+          <p style="font-size: 12px; color: #667eea; margin-top: 12px;">
+            Then refresh this page
+          </p>
+        </div>
+      ` : `
+        <div style="color: #f39c12; padding: 20px; text-align: left;">
+          <div style="font-size: 40px; text-align: center; margin-bottom: 16px;">📷</div>
+          <strong style="font-size: 16px;">Camera access needed</strong>
+          <p style="font-size: 13px; color: #888; margin-top: 8px; line-height: 1.5;">
+            Tap the lock/camera icon in your browser's address bar to enable camera access
+          </p>
+          <p style="font-size: 12px; color: #667eea; margin-top: 12px;">
+            Then refresh this page
+          </p>
+        </div>
+      `;
+      statusText.textContent = '';
+      statusSub.textContent = '';
     }
 
     // Get location
@@ -333,10 +365,40 @@
           },
           (err) => {
             console.error('Location error:', err);
-            locationEl.textContent = '📍 Location unavailable';
+            if (err.code === 1) {
+              // Permission denied
+              showLocationHelp();
+            } else {
+              locationEl.textContent = '📍 Location unavailable';
+            }
           },
           { enableHighAccuracy: true, timeout: 10000 }
         );
+      }
+    }
+
+    // Show help for denied location permission
+    function showLocationHelp() {
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+      if (isIOS) {
+        locationEl.innerHTML = `
+          <div style="color: #f39c12; font-size: 14px; line-height: 1.4; max-width: 300px; margin: 0 auto;">
+            <strong>📍 Location access needed</strong><br>
+            <span style="font-size: 12px; color: #888;">
+              Open <b>Settings → Privacy → Location Services → Safari</b> and set to "While Using"
+            </span>
+          </div>
+        `;
+      } else {
+        locationEl.innerHTML = `
+          <div style="color: #f39c12; font-size: 14px; line-height: 1.4;">
+            <strong>📍 Location access needed</strong><br>
+            <span style="font-size: 12px; color: #888;">
+              Tap the lock icon in your browser's address bar to enable location
+            </span>
+          </div>
+        `;
       }
     }
 

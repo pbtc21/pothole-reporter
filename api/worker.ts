@@ -216,7 +216,7 @@ const HTML = `<!DOCTYPE html>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#0f0f23">
-  <title>POTHOLE HUNTER - Bel Air</title>
+  <title>POTHOLE HUNTER LA</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     body {
@@ -556,8 +556,8 @@ const HTML = `<!DOCTYPE html>
 <body>
   <div id="main-screen" class="screen active">
     <div class="header">
-      <h1>POTHOLE HUNTER</h1>
-      <p>Making Bel Air roads smooth again</p>
+      <h1>POTHOLE HUNTER LA</h1>
+      <p>Fixing LA streets, one pothole at a time</p>
     </div>
     <div class="main">
       <div id="gps-bar" class="gps-bar searching">
@@ -876,14 +876,14 @@ const HTML = `<!DOCTYPE html>
     }
 
     async function reverseGeo(l) {
-      if (!l) return 'Bel Air, Los Angeles, CA';
+      if (!l) return 'Los Angeles, CA';
       try {
         const r = await fetch('https://nominatim.openstreetmap.org/reverse?lat=' + l.lat + '&lon=' + l.lng + '&format=json&addressdetails=1');
         const d = await r.json();
         const a = d.address || {};
         const parts = [a.house_number, a.road, a.neighbourhood || a.suburb, a.city || 'Los Angeles', 'CA', a.postcode].filter(Boolean);
         return parts.join(', ') || d.display_name || 'Bel Air, Los Angeles, CA';
-      } catch { return 'Bel Air, Los Angeles, CA'; }
+      } catch { return 'Los Angeles, CA'; }
     }
 
     shareBtn.onclick = async () => {
