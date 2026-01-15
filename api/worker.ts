@@ -1,6 +1,6 @@
 /**
- * Fix My Street - Pothole Reporter for LA
- * Actually sends reports to LA 311
+ * POTHOLE LA - Bauhaus Edition
+ * Reports potholes to LA 311 with interpolated street addresses
  */
 
 interface Env {
@@ -22,7 +22,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
-// LA Bureau of Street Services
 const LA_311_EMAIL = "311@lacity.org";
 const STREET_SERVICES_EMAIL = "BSS.CustomerService@lacity.org";
 
@@ -38,13 +37,11 @@ export default {
       return handleReport(request, env, url.origin);
     }
 
-    // Serve image by report ID
     if (url.pathname.startsWith("/image/")) {
       const reportId = url.pathname.replace("/image/", "");
       return serveImage(reportId, env);
     }
 
-    // View full report
     if (url.pathname.startsWith("/view/")) {
       const reportId = url.pathname.replace("/view/", "");
       return serveReportPage(reportId, env);
@@ -56,25 +53,53 @@ export default {
       });
     }
 
-    // Serve frontend
+    // OG Image - Bauhaus style
+    if (url.pathname === "/og.png") {
+      return serveOGImage();
+    }
+
     return new Response(HTML, {
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
   },
 };
 
+function serveOGImage(): Response {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+    <rect fill="#FFFEF0" width="1200" height="630"/>
+    <rect fill="#1a1a1a" x="0" y="0" width="1200" height="120"/>
+    <circle cx="60" cy="60" r="20" fill="#E53935"/>
+    <circle cx="110" cy="60" r="20" fill="#FFC107"/>
+    <circle cx="160" cy="60" r="20" fill="#1565C0"/>
+    <text x="220" y="72" font-family="system-ui,sans-serif" font-size="32" font-weight="900" fill="#FFFEF0" letter-spacing="6">POTHOLE LA</text>
+    <circle cx="300" cy="380" r="180" fill="none" stroke="#E53935" stroke-width="16"/>
+    <line x1="300" y1="200" x2="300" y2="560" stroke="#E53935" stroke-width="8"/>
+    <line x1="120" y1="380" x2="480" y2="380" stroke="#E53935" stroke-width="8"/>
+    <rect x="600" y="200" width="500" height="80" fill="#1a1a1a"/>
+    <text x="620" y="255" font-family="system-ui,sans-serif" font-size="28" font-weight="700" fill="#FFFEF0">SNAP</text>
+    <rect x="600" y="300" width="500" height="80" fill="#FFC107"/>
+    <text x="620" y="355" font-family="system-ui,sans-serif" font-size="28" font-weight="700" fill="#1a1a1a">LOCATE</text>
+    <rect x="600" y="400" width="500" height="80" fill="#1565C0"/>
+    <text x="620" y="455" font-family="system-ui,sans-serif" font-size="28" font-weight="700" fill="#FFFEF0">REPORT</text>
+    <text x="600" y="550" font-family="system-ui,sans-serif" font-size="18" fill="#666" letter-spacing="2">POTHOLELA.COM</text>
+  </svg>`;
+
+  return new Response(svg, {
+    headers: {
+      "Content-Type": "image/svg+xml",
+      "Cache-Control": "public, max-age=86400"
+    }
+  });
+}
+
 async function serveImage(reportId: string, env: Env): Promise<Response> {
   const data = await env.REPORTS.get(reportId);
-  if (!data) {
-    return new Response("Not found", { status: 404 });
-  }
+  if (!data) return new Response("Not found", { status: 404 });
   const report = JSON.parse(data);
   const base64 = report.image.split(",")[1];
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return new Response(bytes, {
     headers: { "Content-Type": "image/jpeg", "Cache-Control": "public, max-age=31536000" },
   });
@@ -82,31 +107,43 @@ async function serveImage(reportId: string, env: Env): Promise<Response> {
 
 async function serveReportPage(reportId: string, env: Env): Promise<Response> {
   const data = await env.REPORTS.get(reportId);
-  if (!data) {
-    return new Response("Report not found", { status: 404 });
-  }
+  if (!data) return new Response("Report not found", { status: 404 });
   const report = JSON.parse(data);
   const html = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Pothole Report ${reportId}</title>
-<style>body{font-family:system-ui;max-width:600px;margin:0 auto;padding:20px;background:#1a1a2e;color:#fff}
-img{width:100%;border-radius:12px;margin:20px 0}h1{color:#f39c12}
-.info{background:#16213e;padding:16px;border-radius:8px;margin:16px 0}
-a{color:#667eea}</style></head>
+<title>Report ${reportId}</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:#FFFEF0;color:#1a1a1a;min-height:100vh;padding:24px}
+.container{max-width:480px;margin:0 auto}
+h1{font-size:14px;font-weight:900;letter-spacing:4px;text-transform:uppercase;margin-bottom:24px;display:flex;align-items:center;gap:12px}
+h1::before{content:'';width:24px;height:24px;background:#E53935;border-radius:50%}
+img{width:100%;aspect-ratio:4/3;object-fit:cover;border:4px solid #1a1a1a;margin-bottom:24px}
+.info{border:4px solid #1a1a1a;padding:20px;margin-bottom:16px}
+.label{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#666;margin-bottom:4px}
+.value{font-size:18px;font-weight:700;margin-bottom:16px}
+.value:last-child{margin-bottom:0}
+a{color:#1565C0;text-decoration:none;border-bottom:2px solid currentColor}
+</style></head>
 <body>
+<div class="container">
 <h1>Pothole Report</h1>
-<p><strong>ID:</strong> ${reportId}</p>
-<img src="/image/${reportId}" alt="Pothole photo">
+<img src="/image/${reportId}" alt="Pothole">
 <div class="info">
-<p><strong>Address:</strong> ${report.address}</p>
-<p><strong>GPS:</strong> ${report.location.lat.toFixed(6)}, ${report.location.lng.toFixed(6)}</p>
-<p><a href="${report.googleMapsUrl}" target="_blank">View on Google Maps</a></p>
-<p><strong>Reported:</strong> ${new Date(report.timestamp).toLocaleString()}</p>
+<div class="label">Report ID</div>
+<div class="value">${reportId}</div>
+<div class="label">Address</div>
+<div class="value">${report.address}</div>
+<div class="label">Coordinates</div>
+<div class="value">${report.location.lat.toFixed(6)}, ${report.location.lng.toFixed(6)}</div>
+<div class="label">Map</div>
+<div class="value"><a href="${report.googleMapsUrl}" target="_blank">View on Google Maps</a></div>
+</div>
 </div>
 </body></html>`;
   return new Response(html, { headers: { "Content-Type": "text/html" } });
 }
-
 
 async function handleReport(request: Request, env: Env, origin: string): Promise<Response> {
   try {
@@ -117,7 +154,6 @@ async function handleReport(request: Request, env: Env, origin: string): Promise
     const imageUrl = `${origin}/image/${reportId}`;
     const viewUrl = `${origin}/view/${reportId}`;
 
-    // Store complete report first so image URL works
     const fullReport = {
       ...report,
       id: reportId,
@@ -129,20 +165,14 @@ async function handleReport(request: Request, env: Env, origin: string): Promise
     };
 
     await env.REPORTS.put(reportId, JSON.stringify(fullReport), {
-      expirationTtl: 60 * 60 * 24 * 180 // 180 days
+      expirationTtl: 60 * 60 * 24 * 180
     });
 
-    // Generate formal letter with image link
-    const formalLetter = generateFormalLetterWithImage(report, reportId, googleMapsUrl, imageUrl, viewUrl);
-
-    // Generate mailto link for direct email submission
+    const formalLetter = generateFormalLetter(report, reportId, googleMapsUrl, imageUrl, viewUrl);
     const streetName = report.address.split(',')[0] || 'Unknown Location';
     const emailSubject = encodeURIComponent(`Pothole Report ${reportId} - ${streetName}`);
     const emailBody = encodeURIComponent(formalLetter);
     const mailtoUrl = `mailto:${STREET_SERVICES_EMAIL}?cc=${LA_311_EMAIL}&subject=${emailSubject}&body=${emailBody}`;
-
-    // MyLA311 direct link
-    const myLA311Url = `https://myla311.lacity.org/portal/faces/home`;
 
     return new Response(JSON.stringify({
       success: true,
@@ -152,25 +182,22 @@ async function handleReport(request: Request, env: Env, origin: string): Promise
       viewUrl,
       formalLetter,
       mailtoUrl,
-      myLA311Url,
+      myLA311Url: "https://myla311.lacity.org/portal/faces/home",
       address: report.address,
-      message: "Report ready to send!",
+      message: "Report ready!",
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
   } catch (err) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: "Failed to process report",
-    }), {
+    return new Response(JSON.stringify({ success: false, error: "Failed to process report" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 }
 
-function generateFormalLetterWithImage(report: PotholeReport, reportId: string, googleMapsUrl: string, imageUrl: string, viewUrl: string): string {
+function generateFormalLetter(report: PotholeReport, reportId: string, googleMapsUrl: string, imageUrl: string, viewUrl: string): string {
   const date = new Date().toLocaleDateString('en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
   });
@@ -201,10 +228,10 @@ This pothole poses a safety hazard to vehicles and pedestrians. Please prioritiz
 Thank you for your service to our community.
 
 Sincerely,
-A Concerned Bel Air Resident
+A Concerned LA Resident
 
 ---
-Submitted via Fix My Street App
+Submitted via POTHOLE LA
 Report ID: ${reportId}`;
 }
 
@@ -214,730 +241,922 @@ const HTML = `<!DOCTYPE html>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#0f0f23">
-  <title>POTHOLE HUNTER LA</title>
+  <meta name="theme-color" content="#FFFEF0">
+  <title>POTHOLE LA</title>
+  <meta name="description" content="Report LA potholes with GPS precision. Snap, locate, report.">
+  <meta property="og:title" content="POTHOLE LA">
+  <meta property="og:description" content="Report LA potholes with GPS precision. Bauhaus-inspired civic tech.">
+  <meta property="og:image" content="https://potholela.com/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%231a1a1a' width='100' height='100'/><circle cx='30' cy='50' r='15' fill='%23E53935'/><circle cx='50' cy='50' r='15' fill='%23FFC107'/><circle cx='70' cy='50' r='15' fill='%231565C0'/></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;900&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    :root {
+      --red: #E53935;
+      --blue: #1565C0;
+      --yellow: #FFC107;
+      --black: #1a1a1a;
+      --cream: #FFFEF0;
+    }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(180deg, #0f0f23 0%, #1a1a3e 100%);
-      color: white;
+      font-family: 'DM Sans', -apple-system, sans-serif;
+      background: var(--cream);
+      color: var(--black);
       min-height: 100vh;
       min-height: 100dvh;
-      display: flex;
-      flex-direction: column;
-      overflow-x: hidden;
     }
-    .header {
-      padding: 20px;
-      text-align: center;
-      background: linear-gradient(135deg, #ff6b35 0%, #f7c531 100%);
-      position: relative;
-      overflow: hidden;
-    }
-    .header::before {
-      content: '';
-      position: absolute;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
-      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
-      animation: shimmer 3s infinite;
-    }
-    @keyframes shimmer { 0%,100%{transform:rotate(0deg)} 50%{transform:rotate(180deg)} }
-    .header h1 { font-size: 28px; font-weight: 900; letter-spacing: 2px; text-shadow: 2px 2px 0 rgba(0,0,0,0.2); position: relative; }
-    .header p { font-size: 14px; opacity: 0.9; margin-top: 4px; position: relative; }
 
+    /* HEADER - Bauhaus geometric */
+    .header {
+      background: var(--black);
+      color: var(--cream);
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .logo {
+      display: flex;
+      gap: 6px;
+    }
+    .logo span {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+    }
+    .logo span:nth-child(1) { background: var(--red); }
+    .logo span:nth-child(2) { background: var(--yellow); }
+    .logo span:nth-child(3) { background: var(--blue); }
+    .header h1 {
+      font-size: 14px;
+      font-weight: 900;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+    }
+
+    /* GPS BAR */
+    .gps-bar {
+      padding: 16px 24px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 4px solid var(--black);
+    }
+    .gps-bar.searching {
+      background: var(--yellow);
+      color: var(--black);
+    }
+    .gps-bar.locked {
+      background: var(--blue);
+      color: white;
+    }
+    .gps-bar.error {
+      background: var(--red);
+      color: white;
+      cursor: pointer;
+    }
+    .gps-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: pulse 1s infinite;
+    }
+    .gps-bar.locked .gps-dot { animation: none; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    /* MAIN */
     .main {
       flex: 1;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      padding: 20px;
-      gap: 16px;
+      padding: 24px;
+      gap: 24px;
     }
 
-    /* GPS Status Bar */
-    .gps-bar {
+    /* VIEWFINDER */
+    .viewfinder {
       width: 100%;
-      max-width: 320px;
-      padding: 12px 16px;
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 14px;
-      font-weight: 600;
-      transition: all 0.3s;
-    }
-    .gps-bar.searching {
-      background: linear-gradient(90deg, #ff6b35, #f7c531, #ff6b35);
-      background-size: 200% 100%;
-      animation: gpsSearch 1.5s infinite;
-    }
-    @keyframes gpsSearch { 0%{background-position:0% 50%} 100%{background-position:200% 50%} }
-    .gps-bar.locked {
-      background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
-    }
-    .gps-bar svg { width: 20px; height: 20px; fill: currentColor; }
-    .gps-bar.searching svg { animation: pulse 1s infinite; }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
-
-    .preview-area {
-      width: 100%;
-      max-width: 320px;
+      max-width: 360px;
       aspect-ratio: 4/3;
-      background: #16213e;
-      border-radius: 24px;
-      overflow: hidden;
+      background: var(--black);
       position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border: 4px solid #2d2d5a;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.4), inset 0 0 60px rgba(255,107,53,0.05);
+      border: 4px solid var(--black);
     }
-    .preview-area video, .preview-area img {
+    .viewfinder video, .viewfinder img {
       width: 100%;
       height: 100%;
       object-fit: cover;
     }
-    .preview-area canvas { display: none; }
-    .preview-area .crosshair {
+    .viewfinder canvas { display: none; }
+
+    /* Bauhaus crosshair */
+    .crosshair {
       position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      display: none;
+    }
+    .crosshair .circle {
       width: 60px;
       height: 60px;
-      border: 3px solid rgba(255,107,53,0.7);
+      border: 3px solid var(--red);
       border-radius: 50%;
-      pointer-events: none;
-      animation: crosshairPulse 2s infinite;
     }
-    @keyframes crosshairPulse { 0%,100%{transform:scale(1);opacity:0.7} 50%{transform:scale(1.1);opacity:1} }
-    .crosshair::before, .crosshair::after {
-      content: '';
+    .crosshair .h-line, .crosshair .v-line {
       position: absolute;
-      background: rgba(255,107,53,0.7);
+      background: var(--red);
     }
-    .crosshair::before { width: 2px; height: 20px; left: 50%; top: 50%; transform: translate(-50%, -50%); }
-    .crosshair::after { width: 20px; height: 2px; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+    .crosshair .h-line {
+      width: 80px;
+      height: 3px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .crosshair .v-line {
+      width: 3px;
+      height: 80px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
 
     .placeholder {
-      text-align: center;
-      color: #ff6b35;
-      padding: 20px;
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #666;
+      gap: 8px;
     }
-    .placeholder .icon { font-size: 60px; margin-bottom: 12px; }
-    .placeholder p { font-size: 16px; line-height: 1.4; }
-
-    .big-btn {
-      width: 90px;
-      height: 90px;
+    .placeholder-icon {
+      width: 48px;
+      height: 48px;
+      border: 3px solid #666;
       border-radius: 50%;
-      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    /* BIG BUTTON - Bauhaus circle */
+    .capture-btn {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      border: 4px solid var(--black);
+      background: var(--cream);
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.2s;
+      transition: all 0.15s;
       position: relative;
     }
-    .big-btn.disabled {
-      background: #444;
-      box-shadow: none;
-      cursor: not-allowed;
+    .capture-btn::before {
+      content: '';
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: #ccc;
+      transition: all 0.15s;
     }
-    .big-btn.ready {
-      background: linear-gradient(135deg, #ff6b35 0%, #f7c531 100%);
-      box-shadow: 0 6px 30px rgba(255,107,53,0.6);
-      animation: readyPulse 2s infinite;
-    }
-    @keyframes readyPulse { 0%,100%{box-shadow:0 6px 30px rgba(255,107,53,0.6)} 50%{box-shadow:0 6px 50px rgba(255,107,53,0.9)} }
-    .big-btn.captured {
-      background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
-      box-shadow: 0 6px 30px rgba(0,184,148,0.6);
-    }
-    .big-btn:active:not(.disabled) { transform: scale(0.92); }
-    .big-btn .icon { font-size: 36px; }
+    .capture-btn.ready::before { background: var(--red); }
+    .capture-btn.captured::before { background: var(--blue); }
+    .capture-btn:active { transform: scale(0.95); }
+    .capture-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .capture-btn:disabled:active { transform: none; }
 
-    .status { text-align: center; min-height: 50px; }
-    .status-main { font-size: 22px; font-weight: 800; }
-    .status-main.warning { color: #f7c531; }
-    .status-main.success { color: #00b894; }
-    .status-sub { font-size: 13px; color: #888; margin-top: 4px; }
-
-    .screen { display: none; }
-    .screen.active { display: flex; flex-direction: column; flex: 1; }
-
-    /* Success screen */
-    .success-screen {
-      align-items: center;
+    /* STATUS */
+    .status {
       text-align: center;
-      padding: 20px;
-      overflow-y: auto;
     }
-    .success-icon { font-size: 80px; animation: celebrate 0.5s ease-out; }
-    @keyframes celebrate { 0%{transform:scale(0)} 50%{transform:scale(1.2)} 100%{transform:scale(1)} }
-    .success-screen h2 { font-size: 28px; margin: 12px 0 6px; color: #00b894; font-weight: 900; }
-    .success-screen .subtitle { color: #888; font-size: 14px; margin-bottom: 16px; }
+    .status-main {
+      font-size: 24px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .status-sub {
+      font-size: 12px;
+      color: #666;
+      margin-top: 4px;
+      letter-spacing: 1px;
+    }
+
+    /* SCREENS */
+    .screen { display: none; }
+    .screen.active { display: flex; flex-direction: column; min-height: 100vh; }
+
+    /* SUCCESS SCREEN */
+    .success-header {
+      background: var(--blue);
+      color: white;
+      padding: 24px;
+      text-align: center;
+    }
+    .success-header h2 {
+      font-size: 14px;
+      font-weight: 900;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+    }
 
     .report-card {
-      background: linear-gradient(135deg, #1e1e3f 0%, #2d2d5a 100%);
-      border-radius: 16px;
-      padding: 16px;
-      margin-bottom: 16px;
-      width: 100%;
-      max-width: 340px;
-      text-align: left;
-      border: 2px solid #3d3d7a;
+      padding: 24px;
     }
     .report-card img {
       width: 100%;
-      border-radius: 12px;
-      margin-bottom: 12px;
+      aspect-ratio: 4/3;
+      object-fit: cover;
+      border: 4px solid var(--black);
+      margin-bottom: 24px;
     }
-    .report-card .label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
-    .report-card .value { font-size: 15px; color: #fff; margin-bottom: 12px; word-break: break-word; }
-    .report-card .value a { color: #00cec9; text-decoration: none; }
-
-    .send-options {
-      width: 100%;
-      max-width: 340px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-bottom: 16px;
+    .field {
+      margin-bottom: 20px;
     }
-    .send-btn {
-      padding: 16px 20px;
-      border: none;
-      border-radius: 14px;
+    .field-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #666;
+      margin-bottom: 4px;
+    }
+    .field-value {
       font-size: 16px;
       font-weight: 700;
-      cursor: pointer;
+    }
+    .field-value a {
+      color: var(--blue);
+      text-decoration: none;
+      border-bottom: 2px solid currentColor;
+    }
+
+    /* ACTION BUTTONS */
+    .actions {
+      padding: 0 24px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .action-btn {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 10px;
+      gap: 12px;
+      padding: 16px 24px;
+      border: 4px solid var(--black);
+      background: var(--cream);
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      text-transform: uppercase;
       text-decoration: none;
-      color: white;
-      transition: transform 0.15s;
+      color: var(--black);
+      cursor: pointer;
+      transition: all 0.1s;
     }
-    .send-btn:active { transform: scale(0.97); }
-    .send-btn.email { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-    .send-btn.la311 { background: linear-gradient(135deg, #ff6b35 0%, #f7c531 100%); }
-    .send-btn.share { background: linear-gradient(135deg, #00b894 0%, #00cec9 100%); }
-    .send-btn .icon { font-size: 22px; }
+    .action-btn:active {
+      transform: translate(2px, 2px);
+    }
+    .action-btn.primary {
+      background: var(--red);
+      color: white;
+      border-color: var(--red);
+    }
+    .action-btn.secondary {
+      background: var(--blue);
+      color: white;
+      border-color: var(--blue);
+    }
+    .action-btn .icon {
+      font-size: 18px;
+    }
 
     .again-btn {
-      padding: 14px 40px;
-      background: #2d2d5a;
-      border: 2px solid #3d3d7a;
-      border-radius: 30px;
-      color: white;
-      font-size: 15px;
-      font-weight: 600;
+      margin: 24px;
+      padding: 16px;
+      background: transparent;
+      border: 2px solid #ccc;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #666;
       cursor: pointer;
-      margin-top: 8px;
     }
 
+    /* LOADING */
     .loading {
       position: fixed;
       inset: 0;
-      background: rgba(15, 15, 35, 0.97);
+      background: var(--cream);
       display: none;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      flex-direction: column;
-      gap: 20px;
+      gap: 24px;
       z-index: 100;
     }
     .loading.active { display: flex; }
-    .loading .icon { font-size: 60px; animation: spin 1s linear infinite; }
+    .loading-spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid var(--black);
+      border-top-color: var(--red);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .loading-text { font-size: 18px; font-weight: 600; }
+    .loading-text {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
 
-    /* Help Screen */
-    .help-screen {
+    /* HELP MODAL */
+    .modal {
       position: fixed;
       inset: 0;
-      background: rgba(15, 15, 35, 0.95);
+      background: rgba(0,0,0,0.8);
       display: none;
       align-items: center;
       justify-content: center;
-      z-index: 200;
-      padding: 20px;
-    }
-    .help-screen.active { display: flex; }
-    .help-card {
-      background: linear-gradient(135deg, #1e1e3f 0%, #2d2d5a 100%);
-      border-radius: 24px;
       padding: 24px;
-      max-width: 340px;
-      width: 100%;
-      border: 2px solid #3d3d7a;
+      z-index: 200;
     }
-    .help-header { text-align: center; margin-bottom: 20px; }
-    .help-icon { font-size: 50px; display: block; margin-bottom: 12px; }
-    .help-header h2 { font-size: 24px; font-weight: 800; margin-bottom: 8px; }
-    .help-header p { color: #888; font-size: 14px; }
-    .platform-tabs {
+    .modal.active { display: flex; }
+    .modal-card {
+      background: var(--cream);
+      border: 4px solid var(--black);
+      padding: 24px;
+      max-width: 320px;
+      width: 100%;
+    }
+    .modal-header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .modal-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--yellow);
+      border-radius: 50%;
+      margin: 0 auto 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+    }
+    .modal-header h3 {
+      font-size: 14px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .tabs {
       display: flex;
       gap: 8px;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
     }
-    .platform-tabs .tab {
+    .tab {
       flex: 1;
       padding: 12px;
-      border: none;
-      border-radius: 10px;
-      font-size: 15px;
-      font-weight: 600;
+      border: 2px solid var(--black);
+      background: transparent;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
       cursor: pointer;
-      background: #16213e;
-      color: #888;
-      transition: all 0.2s;
     }
-    .platform-tabs .tab.active {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    .tab.active {
+      background: var(--black);
       color: white;
     }
-    .instructions { display: none; }
-    .instructions.active { display: block; }
+    .steps { display: none; }
+    .steps.active { display: block; }
     .step {
       display: flex;
       align-items: center;
       gap: 12px;
       padding: 12px;
-      background: #16213e;
-      border-radius: 10px;
+      background: white;
+      border: 2px solid #eee;
       margin-bottom: 8px;
-      font-size: 14px;
+      font-size: 13px;
     }
-    .step .num {
-      width: 28px;
-      height: 28px;
-      background: linear-gradient(135deg, #ff6b35 0%, #f7c531 100%);
+    .step-num {
+      width: 24px;
+      height: 24px;
+      background: var(--black);
+      color: white;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
+      font-size: 11px;
       font-weight: 700;
-      font-size: 13px;
       flex-shrink: 0;
     }
-    .step b { color: #00cec9; }
-    .retry-btn {
-      width: 100%;
-      padding: 16px;
-      background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
-      border: none;
-      border-radius: 14px;
-      color: white;
-      font-size: 18px;
-      font-weight: 700;
-      cursor: pointer;
+    .modal-actions {
       margin-top: 16px;
-    }
-    .close-help {
-      width: 100%;
-      padding: 14px;
-      background: transparent;
-      border: none;
-      color: #666;
-      font-size: 14px;
-      cursor: pointer;
-      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
   </style>
 </head>
 <body>
-  <div id="main-screen" class="screen active">
-    <div class="header">
-      <h1>POTHOLE HUNTER LA</h1>
-      <p>Fixing LA streets, one pothole at a time</p>
+
+<div id="main-screen" class="screen active">
+  <div class="header">
+    <div class="logo"><span></span><span></span><span></span></div>
+    <h1>Pothole LA</h1>
+  </div>
+
+  <div id="gps-bar" class="gps-bar searching">
+    <div class="gps-dot"></div>
+    <span id="gps-text">Acquiring location...</span>
+  </div>
+
+  <div class="main">
+    <div class="viewfinder">
+      <video id="video" autoplay playsinline style="display:none"></video>
+      <img id="preview" style="display:none">
+      <canvas id="canvas"></canvas>
+      <div id="placeholder" class="placeholder">
+        <div class="placeholder-icon">?</div>
+        <span style="font-size:12px;letter-spacing:1px">CAMERA LOADING</span>
+      </div>
+      <div id="crosshair" class="crosshair">
+        <div class="circle"></div>
+        <div class="h-line"></div>
+        <div class="v-line"></div>
+      </div>
     </div>
-    <div class="main">
-      <div id="gps-bar" class="gps-bar searching">
-        <svg viewBox="0 0 24 24"><path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg>
-        <span id="gps-text">Locking onto your location...</span>
-      </div>
 
-      <div class="preview-area">
-        <video id="video" autoplay playsinline></video>
-        <img id="preview" style="display:none;">
-        <canvas id="canvas"></canvas>
-        <div id="crosshair" class="crosshair" style="display:none;"></div>
-        <div id="placeholder" class="placeholder">
-          <div class="icon">📷</div>
-          <p>Camera loading...</p>
-        </div>
-      </div>
+    <button id="capture-btn" class="capture-btn" disabled></button>
 
-      <button id="big-btn" class="big-btn disabled" aria-label="Take photo" disabled>
-        <span class="icon">⏳</span>
-      </button>
+    <div class="status">
+      <div id="status-main" class="status-main">Waiting</div>
+      <div id="status-sub" class="status-sub">Need GPS lock first</div>
+    </div>
+  </div>
+</div>
 
-      <div class="status">
-        <div id="status-main" class="status-main warning">Waiting for GPS...</div>
-        <div id="status-sub" class="status-sub">Need location before you can snap</div>
-      </div>
+<div id="success-screen" class="screen">
+  <div class="success-header">
+    <h2>Report Ready</h2>
+  </div>
+
+  <div class="report-card">
+    <img id="report-img" src="" alt="Pothole">
+    <div class="field">
+      <div class="field-label">Address</div>
+      <div class="field-value" id="report-addr"></div>
+    </div>
+    <div class="field">
+      <div class="field-label">Coordinates</div>
+      <div class="field-value" id="report-coords"></div>
+    </div>
+    <div class="field">
+      <div class="field-label">Map</div>
+      <div class="field-value"><a id="report-map" href="#" target="_blank">Open in Google Maps</a></div>
     </div>
   </div>
 
-  <div id="success-screen" class="screen success-screen">
-    <div class="success-icon">🎯</div>
-    <h2>POTHOLE LOCKED!</h2>
-    <p class="subtitle">Ready to send to LA Street Services</p>
-
-    <div class="report-card">
-      <img id="report-img" src="" alt="Pothole photo">
-      <div class="label">Street Address</div>
-      <div class="value" id="report-addr"></div>
-      <div class="label">GPS Coordinates</div>
-      <div class="value" id="report-coords"></div>
-      <div class="label">Map</div>
-      <div class="value"><a id="report-map" href="#" target="_blank">Open in Google Maps →</a></div>
-    </div>
-
-    <div class="send-options">
-      <a id="email-btn" href="#" class="send-btn email">
-        <span class="icon">📧</span> Email Street Services
-      </a>
-      <a id="la311-btn" href="https://myla311.lacity.org" target="_blank" class="send-btn la311">
-        <span class="icon">🏛️</span> Open LA311 Portal
-      </a>
-      <button id="share-btn" class="send-btn share">
-        <span class="icon">📤</span> Share Report
-      </button>
-    </div>
-
-    <button id="again-btn" class="again-btn">🎯 Hunt Another Pothole</button>
+  <div class="actions">
+    <a id="email-btn" href="#" class="action-btn primary">
+      <span class="icon">✉</span> Email Street Services
+    </a>
+    <a href="https://myla311.lacity.org" target="_blank" class="action-btn secondary">
+      <span class="icon">☎</span> Open LA311 Portal
+    </a>
+    <button id="share-btn" class="action-btn">
+      <span class="icon">↗</span> Share Report
+    </button>
   </div>
 
-  <div id="loading" class="loading">
-    <div class="icon">⚡</div>
-    <div class="loading-text">Preparing your report...</div>
-  </div>
+  <button id="again-btn" class="again-btn">Report Another</button>
+</div>
 
-  <div id="help-screen" class="help-screen">
-    <div class="help-card">
-      <div class="help-header">
-        <span class="help-icon">📍</span>
-        <h2>Enable Location</h2>
-        <p>We need your location to pinpoint the pothole</p>
-      </div>
+<div id="loading" class="loading">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Processing...</div>
+</div>
 
-      <div class="platform-tabs">
-        <button class="tab active" onclick="showTab('iphone')">iPhone</button>
-        <button class="tab" onclick="showTab('android')">Android</button>
-      </div>
-
-      <div id="iphone-instructions" class="instructions active">
-        <div class="step"><span class="num">1</span> Open your <b>Settings</b> app</div>
-        <div class="step"><span class="num">2</span> Scroll down and tap <b>Chrome</b></div>
-        <div class="step"><span class="num">3</span> Tap <b>Location</b></div>
-        <div class="step"><span class="num">4</span> Select <b>"While Using the App"</b></div>
-        <div class="step"><span class="num">5</span> Come back here and tap <b>Try Again</b></div>
-      </div>
-
-      <div id="android-instructions" class="instructions">
-        <div class="step"><span class="num">1</span> Open your <b>Settings</b> app</div>
-        <div class="step"><span class="num">2</span> Tap <b>Apps</b> → <b>Chrome</b></div>
-        <div class="step"><span class="num">3</span> Tap <b>Permissions</b></div>
-        <div class="step"><span class="num">4</span> Tap <b>Location</b> → <b>Allow</b></div>
-        <div class="step"><span class="num">5</span> Come back here and tap <b>Try Again</b></div>
-      </div>
-
-      <button class="retry-btn" onclick="retryLocation()">🔄 Try Again</button>
-      <button class="close-help" onclick="closeHelp()">Maybe Later</button>
+<div id="help-modal" class="modal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-icon">!</div>
+      <h3>Enable Location</h3>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('ios')">iPhone</button>
+      <button class="tab" onclick="showTab('android')">Android</button>
+    </div>
+    <div id="ios-steps" class="steps active">
+      <div class="step"><span class="step-num">1</span> Open Settings</div>
+      <div class="step"><span class="step-num">2</span> Tap Safari/Chrome</div>
+      <div class="step"><span class="step-num">3</span> Tap Location</div>
+      <div class="step"><span class="step-num">4</span> Select "While Using"</div>
+    </div>
+    <div id="android-steps" class="steps">
+      <div class="step"><span class="step-num">1</span> Open Settings</div>
+      <div class="step"><span class="step-num">2</span> Apps → Chrome</div>
+      <div class="step"><span class="step-num">3</span> Permissions</div>
+      <div class="step"><span class="step-num">4</span> Location → Allow</div>
+    </div>
+    <div class="modal-actions">
+      <button class="action-btn primary" onclick="retryGPS()">Try Again</button>
+      <button class="action-btn" onclick="closeHelp()">Cancel</button>
     </div>
   </div>
+</div>
 
-  <script>
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    const preview = document.getElementById('preview');
-    const placeholder = document.getElementById('placeholder');
-    const crosshair = document.getElementById('crosshair');
-    const bigBtn = document.getElementById('big-btn');
-    const statusMain = document.getElementById('status-main');
-    const statusSub = document.getElementById('status-sub');
-    const gpsBar = document.getElementById('gps-bar');
-    const gpsText = document.getElementById('gps-text');
-    const loading = document.getElementById('loading');
-    const mainScreen = document.getElementById('main-screen');
-    const successScreen = document.getElementById('success-screen');
-    const againBtn = document.getElementById('again-btn');
-    const emailBtn = document.getElementById('email-btn');
-    const shareBtn = document.getElementById('share-btn');
-    const reportImg = document.getElementById('report-img');
-    const reportAddr = document.getElementById('report-addr');
-    const reportCoords = document.getElementById('report-coords');
-    const reportMap = document.getElementById('report-map');
+<script>
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const preview = document.getElementById('preview');
+const placeholder = document.getElementById('placeholder');
+const crosshair = document.getElementById('crosshair');
+const captureBtn = document.getElementById('capture-btn');
+const statusMain = document.getElementById('status-main');
+const statusSub = document.getElementById('status-sub');
+const gpsBar = document.getElementById('gps-bar');
+const gpsText = document.getElementById('gps-text');
+const loading = document.getElementById('loading');
+const mainScreen = document.getElementById('main-screen');
+const successScreen = document.getElementById('success-screen');
+const helpModal = document.getElementById('help-modal');
 
-    let stream = null;
-    let loc = null;
-    let gpsReady = false;
-    let cameraReady = false;
-    let photoData = null;
-    let hasPhoto = false;
-    let currentReport = null;
+let stream = null;
+let loc = null;
+let gpsReady = false;
+let cameraReady = false;
+let photoData = null;
+let hasPhoto = false;
+let currentReport = null;
 
-    function updateButtonState() {
-      if (hasPhoto) {
-        bigBtn.className = 'big-btn captured';
-        bigBtn.disabled = false;
-        bigBtn.innerHTML = '<span class="icon">🚀</span>';
-        statusMain.textContent = 'Photo captured!';
-        statusMain.className = 'status-main success';
-        statusSub.textContent = 'Tap rocket to send report';
-      } else if (gpsReady && cameraReady) {
-        bigBtn.className = 'big-btn ready';
-        bigBtn.disabled = false;
-        bigBtn.innerHTML = '<span class="icon">📸</span>';
-        statusMain.textContent = 'Ready to hunt!';
-        statusMain.className = 'status-main success';
-        statusSub.textContent = 'Point at pothole and tap';
-        crosshair.style.display = 'block';
-      } else if (!gpsReady) {
-        bigBtn.className = 'big-btn disabled';
-        bigBtn.disabled = true;
-        bigBtn.innerHTML = '<span class="icon">📡</span>';
-        statusMain.textContent = 'Locking GPS...';
-        statusMain.className = 'status-main warning';
-        statusSub.textContent = 'Stay still for best accuracy';
-      } else {
-        bigBtn.className = 'big-btn disabled';
-        bigBtn.disabled = true;
-        bigBtn.innerHTML = '<span class="icon">📷</span>';
-        statusMain.textContent = 'Starting camera...';
-        statusMain.className = 'status-main warning';
-        statusSub.textContent = 'Please allow camera access';
-      }
-    }
+function updateUI() {
+  if (hasPhoto) {
+    captureBtn.className = 'capture-btn captured';
+    captureBtn.disabled = false;
+    statusMain.textContent = 'Captured';
+    statusSub.textContent = 'Tap to send report';
+  } else if (gpsReady && cameraReady) {
+    captureBtn.className = 'capture-btn ready';
+    captureBtn.disabled = false;
+    statusMain.textContent = 'Ready';
+    statusSub.textContent = 'Tap to photograph';
+    crosshair.style.display = 'block';
+  } else if (!gpsReady) {
+    captureBtn.className = 'capture-btn';
+    captureBtn.disabled = true;
+    statusMain.textContent = 'Waiting';
+    statusSub.textContent = 'Acquiring GPS...';
+  } else {
+    captureBtn.className = 'capture-btn';
+    captureBtn.disabled = true;
+    statusMain.textContent = 'Camera';
+    statusSub.textContent = 'Please allow access';
+  }
+}
 
-    async function startCam() {
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
-          audio: false
-        });
-        video.srcObject = stream;
-        video.style.display = 'block';
-        placeholder.style.display = 'none';
-        cameraReady = true;
-        updateButtonState();
-      } catch (e) {
-        placeholder.innerHTML = '<div class="icon">🚫</div><p>Camera access needed<br>Please allow and refresh</p>';
-      }
-    }
+async function startCamera() {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false
+    });
+    video.srcObject = stream;
+    video.style.display = 'block';
+    placeholder.style.display = 'none';
+    cameraReady = true;
+    updateUI();
+  } catch (e) {
+    placeholder.innerHTML = '<div class="placeholder-icon">✕</div><span style="font-size:12px">CAMERA BLOCKED</span>';
+  }
+}
 
-    function initGPS() {
-      if (!('geolocation' in navigator)) {
-        gpsText.textContent = 'GPS not available on this device';
-        return;
-      }
+function initGPS() {
+  if (!navigator.geolocation) {
+    gpsText.textContent = 'GPS not available';
+    return;
+  }
 
-      function handleError(err) {
-        if (err.code === 1) {
-          // Permission denied - show help screen
-          gpsBar.className = 'gps-bar denied';
-          gpsBar.style.background = '#e74c3c';
-          gpsBar.onclick = showHelp;
-          gpsText.innerHTML = '⚠️ Location blocked - <b>tap here to fix</b>';
-        } else if (err.code === 2) {
-          gpsText.textContent = '📍 GPS unavailable - try outdoors';
-        } else {
-          gpsText.textContent = '⏳ GPS timeout - trying again...';
-          setTimeout(initGPS, 2000);
-        }
-      }
-
-      // Request permission - this triggers the prompt
-      navigator.geolocation.getCurrentPosition(
-        p => {
-          loc = { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy };
-          onGPSLock();
-          startWatching();
-        },
-        handleError,
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-      );
-    }
-
-    function startWatching() {
-      navigator.geolocation.watchPosition(
-        p => {
-          loc = { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy };
-          if (!gpsReady) onGPSLock();
-          if (gpsReady) {
-            const acc = Math.round(loc.accuracy);
-            gpsText.textContent = acc + 'm accuracy • ' + loc.lat.toFixed(5) + ', ' + loc.lng.toFixed(5);
-          }
-        },
-        () => {},
-        { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
-      );
-    }
-
-    const helpScreen = document.getElementById('help-screen');
-
-    function showHelp() {
-      // Auto-detect platform
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-      if (!isIOS) showTab('android');
-      helpScreen.classList.add('active');
-    }
-
-    function closeHelp() {
-      helpScreen.classList.remove('active');
-    }
-
-    function showTab(platform) {
-      document.querySelectorAll('.platform-tabs .tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.instructions').forEach(i => i.classList.remove('active'));
-      document.querySelector('.tab:' + (platform === 'iphone' ? 'first-child' : 'last-child')).classList.add('active');
-      document.getElementById(platform + '-instructions').classList.add('active');
-    }
-
-    function retryLocation() {
-      closeHelp();
-      gpsBar.className = 'gps-bar searching';
-      gpsText.textContent = 'Trying again...';
-      initGPS();
-    }
-
-    function onGPSLock() {
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      loc = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy };
       gpsReady = true;
       gpsBar.className = 'gps-bar locked';
-      const acc = Math.round(loc.accuracy);
-      gpsText.textContent = '✓ Locked! ' + acc + 'm accuracy';
-      updateButtonState();
-    }
-
-    function takePhoto() {
-      if (!gpsReady) {
-        statusMain.textContent = 'Wait for GPS!';
-        statusSub.textContent = 'Need your location first';
-        return;
-      }
-      if (!stream) { startCam(); return; }
-
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      canvas.getContext('2d').drawImage(video, 0, 0);
-      photoData = canvas.toDataURL('image/jpeg', 0.85);
-      preview.src = photoData;
-      preview.style.display = 'block';
-      video.style.display = 'none';
-      crosshair.style.display = 'none';
-      hasPhoto = true;
-      updateButtonState();
-    }
-
-    async function send() {
-      if (!photoData || !loc) return;
-      loading.classList.add('active');
-
-      const addr = await reverseGeo(loc);
-      const report = {
-        type: 'pothole',
-        location: loc,
-        timestamp: new Date().toISOString(),
-        image: photoData,
-        address: addr,
-        source: 'Pothole Hunter'
-      };
-
-      try {
-        const r = await fetch('/report', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(report)
-        });
-        currentReport = await r.json();
-
-        reportImg.src = photoData;
-        reportAddr.textContent = currentReport.address;
-        reportCoords.textContent = loc.lat.toFixed(6) + ', ' + loc.lng.toFixed(6);
-        reportMap.href = currentReport.googleMapsUrl;
-        emailBtn.href = currentReport.mailtoUrl;
-
-      } catch (e) {
-        console.error(e);
-      }
-
-      loading.classList.remove('active');
-      mainScreen.classList.remove('active');
-      successScreen.classList.add('active');
-    }
-
-    async function reverseGeo(l) {
-      if (!l) return 'Los Angeles, CA';
-      try {
-        const r = await fetch('https://nominatim.openstreetmap.org/reverse?lat=' + l.lat + '&lon=' + l.lng + '&format=json&addressdetails=1&zoom=18');
-        const d = await r.json();
-        const a = d.address || {};
-
-        // Build address with street number if available
-        let streetPart = '';
-        if (a.house_number && a.road) {
-          streetPart = a.house_number + ' ' + a.road;
-        } else if (a.road) {
-          // No house number - estimate from GPS (use last 4 digits as approximate number)
-          const approxNum = Math.abs(Math.round(l.lng * 10000) % 10000);
-          streetPart = approxNum + ' ' + a.road + ' (approx)';
-        }
-
-        const parts = [streetPart, a.neighbourhood || a.suburb, a.city || 'Los Angeles', 'CA', a.postcode].filter(Boolean);
-        return parts.join(', ') || d.display_name || 'Los Angeles, CA';
-      } catch { return 'Los Angeles, CA'; }
-    }
-
-    shareBtn.onclick = async () => {
-      if (!currentReport) return;
-      const shareText = 'POTHOLE REPORT ' + currentReport.reportId + '\\n\\nLocation: ' + currentReport.address + '\\nMap: ' + currentReport.googleMapsUrl + '\\nPhoto: ' + currentReport.imageUrl;
-
-      if (navigator.share) {
-        try {
-          const response = await fetch(photoData);
-          const blob = await response.blob();
-          const file = new File([blob], 'pothole.jpg', { type: 'image/jpeg' });
-          await navigator.share({ title: 'Pothole Report', text: shareText, files: [file] });
-        } catch {
-          try { await navigator.share({ title: 'Pothole Report', text: shareText }); } catch {}
-        }
+      gpsText.textContent = Math.round(loc.accuracy) + 'm accuracy';
+      updateUI();
+      watchGPS();
+    },
+    err => {
+      if (err.code === 1) {
+        gpsBar.className = 'gps-bar error';
+        gpsText.textContent = 'Location blocked — tap to fix';
+        gpsBar.onclick = () => helpModal.classList.add('active');
       } else {
-        await navigator.clipboard.writeText(shareText);
-        alert('Copied to clipboard!');
+        gpsText.textContent = 'GPS error — retrying...';
+        setTimeout(initGPS, 2000);
       }
-    };
+    },
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+  );
+}
 
-    function reset() {
-      hasPhoto = false;
-      photoData = null;
-      currentReport = null;
-      preview.style.display = 'none';
-      video.style.display = 'block';
-      crosshair.style.display = gpsReady ? 'block' : 'none';
-      successScreen.classList.remove('active');
-      mainScreen.classList.add('active');
-      updateButtonState();
+function watchGPS() {
+  navigator.geolocation.watchPosition(
+    pos => {
+      loc = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy };
+      gpsText.textContent = Math.round(loc.accuracy) + 'm • ' + loc.lat.toFixed(5) + ', ' + loc.lng.toFixed(5);
+    },
+    () => {},
+    { enableHighAccuracy: true }
+  );
+}
+
+function showTab(platform) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.steps').forEach(s => s.classList.remove('active'));
+  document.querySelector('.tab:' + (platform === 'ios' ? 'first-child' : 'last-child')).classList.add('active');
+  document.getElementById(platform + '-steps').classList.add('active');
+}
+
+function retryGPS() {
+  helpModal.classList.remove('active');
+  gpsBar.className = 'gps-bar searching';
+  gpsText.textContent = 'Retrying...';
+  initGPS();
+}
+
+function closeHelp() {
+  helpModal.classList.remove('active');
+}
+
+function takePhoto() {
+  if (!stream) return;
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  photoData = canvas.toDataURL('image/jpeg', 0.85);
+  preview.src = photoData;
+  preview.style.display = 'block';
+  video.style.display = 'none';
+  crosshair.style.display = 'none';
+  hasPhoto = true;
+  updateUI();
+}
+
+async function sendReport() {
+  if (!photoData || !loc) return;
+  loading.classList.add('active');
+
+  const addr = await getAddress(loc);
+  const report = {
+    type: 'pothole',
+    location: loc,
+    timestamp: new Date().toISOString(),
+    image: photoData,
+    address: addr,
+    source: 'POTHOLE LA'
+  };
+
+  try {
+    const res = await fetch('/report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(report)
+    });
+    currentReport = await res.json();
+
+    document.getElementById('report-img').src = photoData;
+    document.getElementById('report-addr').textContent = currentReport.address;
+    document.getElementById('report-coords').textContent = loc.lat.toFixed(6) + ', ' + loc.lng.toFixed(6);
+    document.getElementById('report-map').href = currentReport.googleMapsUrl;
+    document.getElementById('email-btn').href = currentReport.mailtoUrl;
+
+  } catch (e) {
+    console.error(e);
+  }
+
+  loading.classList.remove('active');
+  mainScreen.classList.remove('active');
+  successScreen.classList.add('active');
+}
+
+// Improved address interpolation using block numbers
+async function getAddress(l) {
+  if (!l) return 'Los Angeles, CA';
+
+  try {
+    // Get street info from Nominatim
+    const res = await fetch(
+      'https://nominatim.openstreetmap.org/reverse?lat=' + l.lat + '&lon=' + l.lng +
+      '&format=json&addressdetails=1&zoom=18&extratags=1'
+    );
+    const data = await res.json();
+    const addr = data.address || {};
+    const road = addr.road || addr.street || '';
+
+    if (!road) return data.display_name || 'Los Angeles, CA';
+
+    // Try to get nearby addresses to interpolate
+    let streetNum = addr.house_number;
+
+    if (!streetNum) {
+      // Query for nearby addresses on this street
+      streetNum = await interpolateAddress(l, road);
     }
 
-    bigBtn.onclick = () => {
-      if (bigBtn.disabled) return;
-      hasPhoto ? send() : takePhoto();
-    };
-    againBtn.onclick = reset;
+    const parts = [];
+    if (streetNum && road) {
+      parts.push(streetNum + ' ' + road);
+    } else if (road) {
+      parts.push(road);
+    }
 
-    // Initialize
-    startCam();
-    initGPS();
-    updateButtonState();
-  </script>
+    if (addr.neighbourhood) parts.push(addr.neighbourhood);
+    else if (addr.suburb) parts.push(addr.suburb);
+
+    parts.push(addr.city || 'Los Angeles');
+    parts.push('CA');
+    if (addr.postcode) parts.push(addr.postcode);
+
+    return parts.join(', ');
+
+  } catch (e) {
+    console.error('Geocoding error:', e);
+    return 'Los Angeles, CA';
+  }
+}
+
+// Interpolate street number from nearby addresses
+async function interpolateAddress(loc, streetName) {
+  try {
+    // Search for nearby addresses on this street
+    const searchUrl = 'https://nominatim.openstreetmap.org/search?street=' +
+      encodeURIComponent(streetName) +
+      '&city=Los+Angeles&state=CA&format=json&limit=10&addressdetails=1';
+
+    const res = await fetch(searchUrl);
+    const places = await res.json();
+
+    // Filter places with house numbers
+    const withNumbers = places.filter(p => p.address && p.address.house_number)
+      .map(p => ({
+        num: parseInt(p.address.house_number),
+        lat: parseFloat(p.lat),
+        lng: parseFloat(p.lon)
+      }))
+      .filter(p => !isNaN(p.num));
+
+    if (withNumbers.length < 2) {
+      // Fallback: estimate based on typical LA block numbering
+      // LA uses 100 addresses per block, baseline varies by area
+      return estimateFromBlock(loc, streetName);
+    }
+
+    // Sort by distance to our location
+    withNumbers.sort((a, b) => {
+      const distA = Math.hypot(a.lat - loc.lat, a.lng - loc.lng);
+      const distB = Math.hypot(b.lat - loc.lat, b.lng - loc.lng);
+      return distA - distB;
+    });
+
+    // Take two closest points to interpolate
+    const p1 = withNumbers[0];
+    const p2 = withNumbers[1] || withNumbers[0];
+
+    if (p1 === p2) return p1.num.toString();
+
+    // Linear interpolation based on position
+    const totalDist = Math.hypot(p2.lat - p1.lat, p2.lng - p1.lng);
+    const ourDist = Math.hypot(loc.lat - p1.lat, loc.lng - p1.lng);
+    const ratio = Math.min(1, Math.max(0, ourDist / totalDist));
+
+    let interpolated = Math.round(p1.num + (p2.num - p1.num) * ratio);
+
+    // Round to nearest even or odd based on side of street
+    // (In LA, even/odd typically alternates by side)
+    const bearing = Math.atan2(p2.lng - p1.lng, p2.lat - p1.lat);
+    const perpendicular = bearing + Math.PI / 2;
+    const side = Math.sign(
+      (loc.lat - p1.lat) * Math.cos(perpendicular) +
+      (loc.lng - p1.lng) * Math.sin(perpendicular)
+    );
+
+    // Adjust to match street side convention
+    if (side > 0 && interpolated % 2 === 0) interpolated++;
+    else if (side < 0 && interpolated % 2 === 1) interpolated++;
+
+    return interpolated.toString();
+
+  } catch (e) {
+    console.error('Interpolation error:', e);
+    return estimateFromBlock(loc, streetName);
+  }
+}
+
+// Estimate address from LA's block numbering system
+function estimateFromBlock(loc, streetName) {
+  // LA's address grid:
+  // - Downtown (Main St/1st St) is the baseline
+  // - Numbers increase 100 per block going outward
+  // - Rough estimates based on distance from downtown
+
+  const dtLat = 34.0522;  // Downtown LA latitude
+  const dtLng = -118.2437; // Downtown LA longitude
+
+  // Distance in "blocks" (roughly 1/8 mile = 0.002 degrees)
+  const blockSize = 0.002;
+
+  // Calculate blocks from downtown
+  const latBlocks = Math.abs(loc.lat - dtLat) / blockSize;
+  const lngBlocks = Math.abs(loc.lng - dtLng) / blockSize;
+
+  // Determine if street runs N-S or E-W based on name
+  const nsPatterns = /^[NSEW]\\s|\\s(Ave|Avenue|St|Street|Blvd|Boulevard|Dr|Drive)$/i;
+  const isNS = streetName.match(/^(N|S|North|South)/i) ||
+               streetName.match(/(Ave|Avenue|Way|Place|Pl)$/i);
+
+  // Use appropriate axis for address
+  const blocks = isNS ? lngBlocks : latBlocks;
+
+  // Base address + 100 per block
+  let estimate = Math.round(100 + blocks * 100);
+
+  // Round to nearest 10 for realism
+  estimate = Math.round(estimate / 10) * 10;
+
+  // Add some randomness within the block (±50)
+  estimate += Math.floor(Math.random() * 50);
+
+  return estimate.toString() + ' (approx)';
+}
+
+document.getElementById('share-btn').onclick = async () => {
+  if (!currentReport) return;
+  const text = 'POTHOLE REPORT ' + currentReport.reportId +
+    '\\n' + currentReport.address +
+    '\\n' + currentReport.googleMapsUrl;
+
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: 'Pothole Report', text });
+    } catch {}
+  } else {
+    await navigator.clipboard.writeText(text);
+    alert('Copied!');
+  }
+};
+
+function reset() {
+  hasPhoto = false;
+  photoData = null;
+  currentReport = null;
+  preview.style.display = 'none';
+  video.style.display = 'block';
+  crosshair.style.display = gpsReady ? 'block' : 'none';
+  successScreen.classList.remove('active');
+  mainScreen.classList.add('active');
+  updateUI();
+}
+
+captureBtn.onclick = () => {
+  if (captureBtn.disabled) return;
+  hasPhoto ? sendReport() : takePhoto();
+};
+
+document.getElementById('again-btn').onclick = reset;
+
+// Init
+startCamera();
+initGPS();
+updateUI();
+</script>
 </body>
 </html>`;
