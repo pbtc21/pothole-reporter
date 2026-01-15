@@ -746,9 +746,9 @@ const HTML = `<!DOCTYPE html>
   </div>
 
   <div class="actions">
-    <a id="email-btn" href="#" class="action-btn primary">
+    <button id="email-btn" class="action-btn primary">
       <span class="icon">✉</span> Email Street Services
-    </a>
+    </button>
     <a href="https://myla311.lacity.org" target="_blank" class="action-btn secondary">
       <span class="icon">☎</span> Open LA311 Portal
     </a>
@@ -957,7 +957,7 @@ async function sendReport() {
     document.getElementById('report-addr').textContent = currentReport.address;
     document.getElementById('report-coords').textContent = loc.lat.toFixed(6) + ', ' + loc.lng.toFixed(6);
     document.getElementById('report-map').href = currentReport.googleMapsUrl;
-    document.getElementById('email-btn').href = currentReport.mailtoUrl;
+    // mailtoUrl stored in currentReport for click handler
 
   } catch (e) {
     console.error(e);
@@ -1152,6 +1152,12 @@ captureBtn.onclick = () => {
 };
 
 document.getElementById('again-btn').onclick = reset;
+
+document.getElementById('email-btn').onclick = () => {
+  if (currentReport && currentReport.mailtoUrl) {
+    window.location.href = currentReport.mailtoUrl;
+  }
+};
 
 // Init
 startCamera();
