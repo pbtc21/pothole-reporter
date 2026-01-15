@@ -190,7 +190,8 @@ async function handleReport(request: Request, env: Env, origin: string): Promise
     });
 
   } catch (err) {
-    return new Response(JSON.stringify({ success: false, error: "Failed to process report" }), {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    return new Response(JSON.stringify({ success: false, error: errorMsg }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
@@ -1161,12 +1162,20 @@ document.getElementById('again-btn').onclick = reset;
 const emailBtn = document.getElementById('email-btn');
 function handleEmailClick(e) {
   e.preventDefault();
-  if (currentReport && currentReport.mailtoUrl) {
-    window.location.href = currentReport.mailtoUrl;
+  e.stopPropagation();
+  if (!currentReport) {
+    alert('No report yet - take a photo first');
+    return;
   }
+  if (!currentReport.mailtoUrl) {
+    alert('Report missing email URL');
+    return;
+  }
+  // Open email
+  window.open(currentReport.mailtoUrl, '_self');
 }
-emailBtn.addEventListener('click', handleEmailClick);
-emailBtn.addEventListener('touchend', handleEmailClick);
+emailBtn.addEventListener('click', handleEmailClick, {passive: false});
+emailBtn.addEventListener('touchstart', handleEmailClick, {passive: false});
 
 // Init
 startCamera();
