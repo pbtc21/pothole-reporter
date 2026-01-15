@@ -531,6 +531,11 @@ const HTML = `<!DOCTYPE html>
       color: var(--black);
       cursor: pointer;
       transition: all 0.1s;
+      -webkit-appearance: none;
+      appearance: none;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
     }
     .action-btn:active {
       transform: translate(2px, 2px);
@@ -1153,11 +1158,15 @@ captureBtn.onclick = () => {
 
 document.getElementById('again-btn').onclick = reset;
 
-document.getElementById('email-btn').onclick = () => {
+const emailBtn = document.getElementById('email-btn');
+function handleEmailClick(e) {
+  e.preventDefault();
   if (currentReport && currentReport.mailtoUrl) {
     window.location.href = currentReport.mailtoUrl;
   }
-};
+}
+emailBtn.addEventListener('click', handleEmailClick);
+emailBtn.addEventListener('touchend', handleEmailClick);
 
 // Init
 startCamera();
